@@ -15,10 +15,17 @@
 
 #include "Arduino.h"
 #include "WiFiMulti.h"
+
+#define AUDIO_INFO(x)
+#define AUDIO_ERROR(x)
+#define AUDIO_DEBUG(x)
+#define AUDIO_WARNING(x)
+
 #include "Audio.h"
 #include "SPI.h"
 #include "SD.h"
 #include "FS.h"
+#include <MuxController.h>
 
 // Digital I/O used
 #define SD_CS 5
@@ -32,7 +39,11 @@
 Audio audio;
 WiFiMulti wifiMulti;
 String ssid = "phenix2";
-String password = "your password";
+String password = "!xshell12";
+
+// Inclusion des classes
+MuxController muxController;
+// Driver74HCT4067 *mux;
 
 void setup()
 {
@@ -42,6 +53,10 @@ void setup()
   SPI.setFrequency(1000000);
   Serial.begin(115200);
   SD.begin(SD_CS);
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+
+  /*
   WiFi.mode(WIFI_STA);
   wifiMulti.addAP(ssid.c_str(), password.c_str());
   wifiMulti.run();
@@ -50,83 +65,63 @@ void setup()
     WiFi.disconnect(true);
     wifiMulti.run();
   }
+  Serial.print("info        ");
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(12); // 0...21
+  */
 
-  //    audio.connecttoFS(SD, "/320k_test.mp3");
-  //    audio.connecttoFS(SD, "test.wav");
-  //    audio.connecttohost("http://www.wdr.de/wdrlive/media/einslive.m3u");
-  //    audio.connecttohost("http://macslons-irish-pub-radio.com/media.asx");
-  //    audio.connecttohost("http://mp3.ffh.de/radioffh/hqlivestream.aac"); //  128k aac
+  // Drone Zone
+  // audio.connecttohost("http://ice1.somafm.com/dronezone-128-mp3");
+  // Groove Salad
+  // audio.connecttohost("http://ice1.somafm.com/groovesalad-128-mp3");
+  // Secret Agent
+  // audio.connecttohost("http://ice1.somafm.com/secretagent-128-mp3");
+  // Space Station
+ // audio.connecttohost("http://ice1.somafm.com/spacestation-128-mp3");
 
-      // Drone Zone
-      //audio.connecttohost("http://ice1.somafm.com/dronezone-128-mp3");
-      //Groove Salad	
-      //audio.connecttohost("http://ice1.somafm.com/groovesalad-128-mp3");
-      //Secret Agent	
-      //audio.connecttohost("http://ice1.somafm.com/secretagent-128-mp3");
-      //Space Station	
-      audio.connecttohost("http://ice1.somafm.com/spacestation-128-mp3");
+  Serial.print("info        ");
+  analogSetWidth(12);
+  analogSetAttenuation(ADC_ATTENDB_MAX);
+  //analogSetClockDiv(2);
+  
+  // mux = new Driver74HCT4067(12, 13, 14, 15, 16, 36, false);
+}
+void plotValues(uint8_t id, uint16_t value)
+{
+  Serial.print('>');
+  Serial.print("");
+  Serial.print(id);
+  Serial.print(':');
+  Serial.print(value);
+  Serial.println();
+  Serial.flush(); 
 
 }
 
+float filtered = 0.0f;
 void loop()
 {
-  audio.loop();
-  if (Serial.available())
-  { // put streamURL in serial monitor
-    audio.stopSong();
-    String r = Serial.readString();
-    r.trim();
-    if (r.length() > 5)
-      audio.connecttohost(r.c_str());
-    log_i("free heap=%i", ESP.getFreeHeap());
-  }
-}
 
-// optional
-void audio_info(const char *info)
-{
-  Serial.print("info        ");
-  Serial.println(info);
-}
-void audio_id3data(const char *info)
-{ // id3 metadata
-  Serial.print("id3data     ");
-  Serial.println(info);
-}
-void audio_eof_mp3(const char *info)
-{ // end of file
-  Serial.print("eof_mp3     ");
-  Serial.println(info);
-}
-void audio_showstation(const char *info)
-{
-  Serial.print("station     ");
-  Serial.println(info);
-}
-void audio_showstreamtitle(const char *info)
-{
-  Serial.print("streamtitle ");
-  Serial.println(info);
-}
-void audio_bitrate(const char *info)
-{
-  Serial.print("bitrate     ");
-  Serial.println(info);
-}
-void audio_commercial(const char *info)
-{ // duration in sec
-  Serial.print("commercial  ");
-  Serial.println(info);
-}
-void audio_icyurl(const char *info)
-{ // homepage
-  Serial.print("icyurl      ");
-  Serial.println(info);
-}
-void audio_lasthost(const char *info)
-{ // stream URL played
-  Serial.print("lasthost    ");
-  Serial.println(info);
+ // audio.loop();
+  /*
+    uint16_t raw = analogRead(36);
+    filtered = 0.9f * filtered + 0.1f * (float)raw;
+    plotValues(0, (uint16_t)filtered);
+    delay(10);
+  */
+  // Exemple : afficher la valeur normalisée du canal 3 du MUX 0
+  /**/
+  uint8_t id = 0;
+ 
+    for (uint8_t i = 0; i < 16; ++i)
+    {
+      muxController.readNext();
+   
+      float raw = muxController.get(0, 1);
+      filtered = 0.9f * filtered + 0.1f * (float)raw;
+      plotValues(1, (uint16_t)raw);
+      // Lecture cadencée par tour
+      delay(5); 
+    }
+
 }
