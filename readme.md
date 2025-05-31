@@ -7,25 +7,12 @@
 https://github.com/cosmicAquarius/geomancia
 
 
+
+# WCMCU-1334 UDA1334A I2S
+
 ![alt text](_doc/asset/wire.jpg)
 
 
-The ADS1015 ADC Module has 14 pins:
-
-* 5V: Power supply input (5V)
-* 3.3V: Power supply input (3.3V)
-* GND: Ground reference for the IC
-* LRC (Left/Right Clock): Input for left/right channel identification
-* DOUT (Data Out): Serial Data Output for transmitting converted analog signals
-* BCLK (Bit Clock): Input for synchronizing data transmission
-* LOUT (Left Channel Output): Analog audio output for the left channel
-* AGND (Analog Ground): Ground for internal analog reference
-* ROUT (Right Channel Output): Analog audio output for the right channel
-* SCLK (System Clock): Input for system clock synchronization
-* SF0 and SF1 (Digital Filter Select): Inputs for selecting digital filter options. SF0 and SF1 are used to set the input data format. By default, both are pulled Low for I2S but you can change them around for alternate formats.
-* MUTE: Input for muting the audio output
-* PLL (Phase-Locked Loop): Input for external clock synchronization
-* DEEM (De-emphasis): Input for de-emphasis control
 
 ![alt text](_doc/asset/image.png)
 
