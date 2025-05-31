@@ -1,13 +1,12 @@
 #include "Arduino.h"
 #include "WiFiMulti.h"
 #include "AudioTools.h"
-
 #include "SPI.h"
 #include "SD.h"
 #include "FS.h"
 #include <MuxController.h>
 
-// Digital I/O used
+
 #define SD_CS 5
 #define SPI_MOSI 23
 #define SPI_MISO 19
@@ -16,43 +15,45 @@
 #define I2S_BCLK 27
 #define I2S_LRC 26
 
-// Configuration audio
-AudioInfo info(44100, 2, 16);               // 44.1kHz, stéréo, 16 bits
-SineWaveGenerator<int16_t> sineWave(32000); // Amplitude
+// Audio configuration
+// 44.1kHz, stereo, 16 bits
+AudioInfo info(44100, 2, 16);
+
+// Amplitude
+SineWaveGenerator<int16_t> sineWave(32000);
 GeneratedSoundStream<int16_t> sound(sineWave);
 I2SStream i2s;
 StreamCopy copier(i2s, sound);
-
-// Inclusion des classes
 MuxController muxController;
 
-// Handles des tâches FreeRTOS
+// FreeRTOS task handles
 TaskHandle_t audioTaskHandle = NULL;
 TaskHandle_t muxTaskHandle = NULL;
 
-// Variables partagées (protégées si nécessaire)
-float filtered = 0.0f;
+
+
 volatile bool audioRunning = false;
 
-//==============================================
-// TÂCHE AUDIO - Priorité élevée
-//==============================================
+/**
+ * AUDIO TASK - High priority
+ */
 void audioTask(void *parameter)
 {
-  Serial.println("Tâche Audio démarrée sur Core " + String(xPortGetCoreID()));
+  Serial.println("Audio Task started on Core " + String(xPortGetCoreID()));
 
   audioRunning = true;
 
   while (audioRunning)
   {
-    // Copie continue du flux audio
+    // Continuous audio stream copy
     copier.copy();
 
-    // Petit yield pour éviter de monopoliser le CPU
-    vTaskDelay(1); // 1ms
+    // Small yield to avoid monopolizing CPU
+    // 1ms
+    vTaskDelay(1);
   }
 
-  Serial.println("Tâche Audio terminée");
+  Serial.println("Audio Task terminated");
   vTaskDelete(NULL);
 }
 
@@ -66,28 +67,28 @@ void plotValues(uint8_t id, uint16_t value)
   Serial.flush();
 }
 
-//==============================================
-// TÂCHE MULTIPLEXEURS - Priorité normale
-//==============================================
+/**
+ * MULTIPLEXER TASK - Normal priority
+ */
 void muxTask(void *parameter)
 {
-  Serial.println("Tâche Multiplexeurs démarrée sur Core " + String(xPortGetCoreID()));
+  Serial.println("Multiplexer Task started on Core " + String(xPortGetCoreID()));
 
   while (true)
   {
-    // Un seul readNext() toutes les 5ms
+    // Single readNext() every 5ms
     muxController.readNext();
 
-    // Pause de 5ms avant le prochain readNext()
+    // 5ms pause before next readNext()
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
 void setupAudio()
 {
-  Serial.println("Initialisation audio...");
+  Serial.println("Audio initialization...");
 
-  // Configuration I2S pour UDA1334A
+  // I2S configuration for UDA1334A
   auto config = i2s.defaultConfig(TX_MODE);
   config.copyFrom(info);
   config.pin_bck = I2S_BCLK;
@@ -96,52 +97,52 @@ void setupAudio()
   config.i2s_format = I2S_STD_FORMAT;
   config.bits_per_sample = 16;
 
-  // Démarrage I2S
+  // I2S startup
   i2s.begin(config);
 
-  // Configuration du générateur de son
+  // Sound generator configuration
   sound.begin(info);
   // 440 Hz
   sineWave.begin(info, N_A4);
 
-  Serial.println("Audio initialisé - 440Hz stéréo");
+  Serial.println("Audio initialized - 440Hz stereo");
 }
 
 void setupTasks()
 {
-  Serial.println("Création des tâches FreeRTOS...");
+  Serial.println("Creating FreeRTOS tasks...");
 
-  // Tâche Audio - Priorité élevée, Core 1 (dédié)
+  // Audio Task - High priority, Core 1 (dedicated)
   xTaskCreatePinnedToCore(
-      audioTask,        // Fonction
-      "AudioTask",      // Nom
+      audioTask,        // Function
+      "AudioTask",      // Name
       4096,             // Stack size
-      NULL,             // Paramètres
-      3,                // Priorité élevée (0-5, 5=max)
+      NULL,             // Parameters
+      3,                // High priority (0-5, 5=max)
       &audioTaskHandle, // Handle
       1                 // Core 1 (Core 0 = WiFi/Bluetooth)
   );
 
-  // Tâche Multiplexeurs - Priorité normale, Core 0
+  // Multiplexer Task - Normal priority, Core 0
   xTaskCreatePinnedToCore(
       muxTask,
       "MuxTask",
       4096,
       NULL,
-      1, // norma priority
+      1, // normal priority
       &muxTaskHandle,
       0 // Core 0
   );
 
   if (audioTaskHandle && muxTaskHandle)
   {
-    Serial.println("✓ Tâches créées avec succès");
-    Serial.println("  - AudioTask: Core 1, Priorité 3");
-    Serial.println("  - MuxTask: Core 0, Priorité 1");
+    Serial.println("✓ Tasks created successfully");
+    Serial.println("  - AudioTask: Core 1, Priority 3");
+    Serial.println("  - MuxTask: Core 0, Priority 1");
   }
   else
   {
-    Serial.println("✗ Erreur création tâches");
+    Serial.println("✗ Task creation error");
   }
 }
 
@@ -157,9 +158,9 @@ void setup()
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
-  // wait for serail to stabilize
+  // wait for serial to stabilize
   delay(1000);
-  Serial.println("\n=== ESP32 Audio Synthesizer avec FreeRTOS ===\n");
+  Serial.println("\n=== ESP32 Audio Synthesizer with FreeRTOS ===\n");
 
   // Setup ADC
   analogSetWidth(12);
@@ -171,7 +172,7 @@ void setup()
   // create tasks
   setupTasks();
 
-  Serial.println("Setup terminé. Les tâches tournent en parallèle.\n");
+  Serial.println("Setup completed. Tasks running in parallel.\n");
 }
 
 void loop()
@@ -184,10 +185,10 @@ void loop()
     lastMonitor = millis();
 
     Serial.printf("=== STATUS ===\n");
-    Serial.printf("Heap libre: %d bytes\n", ESP.getFreeHeap());
-    Serial.printf("Filtered value: %.2f\n", filtered);
+    Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
 
-    // État des tâches
+
+    // Task states
     if (audioTaskHandle)
     {
       Serial.printf("AudioTask state: %d\n", eTaskGetState(audioTaskHandle));
