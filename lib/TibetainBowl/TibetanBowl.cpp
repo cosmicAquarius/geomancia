@@ -75,10 +75,7 @@ void TibetanBowl::release() {
 void TibetanBowl::setADSR(float attack, float decay, float sustain, float release) {
     if (adsr) {
         // Convert seconds to samples for AudioTools ADSR
-        uint32_t attack_samples = (uint32_t)(attack * info.sample_rate);
-        uint32_t decay_samples = (uint32_t)(decay * info.sample_rate);
-        uint32_t release_samples = (uint32_t)(release * info.sample_rate);
-        
+ 
         // Note: AudioTools ADSR constructor takes (attack, decay, sustain_level, release)
         // We need to recreate the ADSR with new parameters
         delete adsr;
@@ -108,9 +105,9 @@ bool TibetanBowl::isActive() const {
 
 void TibetanBowl::initializeComponents() {
     // Create three VCOs with moderate amplitude
-    vco1 = new audio_tools::SineWaveGenerator<int16_t>(10000);
-    vco2 = new audio_tools::SineWaveGenerator<int16_t>(10000);
-    vco3 = new audio_tools::SineWaveGenerator<int16_t>(10000);
+    vco1 = new audio_tools::SawToothGenerator<int16_t>(10000);
+    vco2 = new audio_tools::SquareWaveGenerator<int16_t>(10000);
+    vco3 = new audio_tools::SawToothGenerator<int16_t>(10000);
     
     // Create streams for each VCO
     stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
@@ -122,18 +119,19 @@ void TibetanBowl::initializeComponents() {
     stream2->begin(info);
     stream3->begin(info);
     
-    vco1->begin(info, 440.0f);
-    vco2->begin(info, 880.0f);  // 2nd harmonic
-    vco3->begin(info, 1320.0f); // 3rd harmonic
+    vco1->begin(info, 55.0f);
+    vco2->begin(info, 110.0f);  // 2nd harmonic
+    vco3->begin(info, 165.0f); // 3rd harmonic
     mixer.add(*stream1, 33); // 33% level for VCO1
     mixer.add(*stream2,33); // 33% level for VCO2
-    mixer.add(*stream3,33); // 33% level for VCO3
+    mixer.add(*stream3,20); // 33% level for VCO3
     mixer.begin(info);
+    
 
     
     // Create ADSR with bowl-like envelope
     // Long attack, moderate decay, high sustain, very long release
-   // adsr = new audio_tools::ADSRGain(0.1f, 0.2f, 0.7f, 8.0f);
+    adsr = new audio_tools::ADSRGain(3.0f, 0.5f, 0.8f, 15.0f);
 }
 
 void TibetanBowl::updateFrequencies() {
