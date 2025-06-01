@@ -1,28 +1,27 @@
 #include "Arduino.h"
 #include "WiFiMulti.h"
 #include "AudioTools.h"
-#include "SPI.h"
-#include "SD.h"
-#include "FS.h"
-#include <MuxController.h>
 
-#define SD_CS 5
-#define SPI_MOSI 23
-#define SPI_MISO 19
-#define SPI_SCK 18
+#include <MuxController.h>
+#include <DriverUDA1334A.h>
+
 #define I2S_DOUT 25
 #define I2S_BCLK 27
 #define I2S_LRC 26
 
 // Audio configuration
-// 44.1kHz, stereo, 16 bits
 AudioInfo info(44100, 2, 16);
 
 // Amplitude
 SineWaveGenerator<int16_t> sineWave(32000);
 GeneratedSoundStream<int16_t> sound(sineWave);
-I2SStream i2s;
-StreamCopy copier(i2s, sound);
+
+// Driver UDA1334A (contient déjà l'I2SStream)
+DriverUDA1334A driverUDA1334A;
+
+// StreamCopy sera initialisé après le driver dans setupAudio()
+StreamCopy* copier = nullptr;
+
 MuxController muxController;
 
 // FreeRTOS task handles
@@ -38,12 +37,18 @@ void audioTask(void *parameter)
 {
   Serial.println("Audio Task started on Core " + String(xPortGetCoreID()));
 
+  if (!copier) {
+    Serial.println("Erreur: copier non initialisé");
+    vTaskDelete(NULL);
+    return;
+  }
+
   audioRunning = true;
 
   while (audioRunning)
   {
     // Continuous audio stream copy
-    copier.copy();
+    copier->copy();
 
     // Small yield to avoid monopolizing CPU
     // 1ms
@@ -84,23 +89,20 @@ void muxTask(void *parameter)
 void setupAudio()
 {
   Serial.println("Audio initialization...");
-
-  // I2S configuration for UDA1334A
-  auto config = i2s.defaultConfig(TX_MODE);
-  config.copyFrom(info);
-  config.pin_bck = I2S_BCLK;
-  config.pin_ws = I2S_LRC;
-  config.pin_data = I2S_DOUT;
-  config.i2s_format = I2S_STD_FORMAT;
-  config.bits_per_sample = 16;
-
-  // I2S startup
-  i2s.begin(config);
+ 
+  // Initialisez le driver UDA1334A
+  if (!driverUDA1334A.begin(info)) {
+    Serial.println("Erreur: Impossible d'initialiser UDA1334A");
+    return;
+  }
 
   // Sound generator configuration
   sound.begin(info);
   // 440 Hz
   sineWave.begin(info, N_A4);
+
+  // Créez le StreamCopy APRÈS l'initialisation du driver
+  copier = new StreamCopy(driverUDA1334A.getStream(), sound);
 
   Serial.println("Audio initialized - 440Hz stereo");
 }
@@ -145,13 +147,8 @@ void setupTasks()
 
 void setup()
 {
-  // Init hardware
-  pinMode(SD_CS, OUTPUT);
-  digitalWrite(SD_CS, HIGH);
-  SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
-  SPI.setFrequency(1000000);
   Serial.begin(115200);
-  SD.begin(SD_CS);
+
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
@@ -171,31 +168,48 @@ void setup()
 
   Serial.println("Setup completed. Tasks running in parallel.\n");
 }
-
-void loop()
-{
-
+// Fonction utilitaire pour formater la mémoire
+String formatMemory(uint32_t bytes) {
+  if (bytes >= 1024 * 1024) {
+    return String(bytes / 1024.0 / 1024.0, 1) + " MB";
+  } else if (bytes >= 1024) {
+    return String(bytes / 1024.0, 1) + " KB";
+  } else {
+    return String(bytes) + " B";
+  }
+}
+// Dans votre loop() :
+void loop() {
   static unsigned long lastMonitor = 0;
-  // each 5 sec
-  if (millis() - lastMonitor > 5000)
-  {
+  
+  if (millis() - lastMonitor > 5000) {
     lastMonitor = millis();
 
-    Serial.printf("=== STATUS ===\n");
-    Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
+    // Calculs mémoire
+    uint32_t freeHeap = ESP.getFreeHeap();
+    uint32_t totalHeap = ESP.getHeapSize();
+    uint32_t usedHeap = totalHeap - freeHeap;
+    float usedPercent = (usedHeap * 100.0) / totalHeap;
+
+    Serial.printf("=== ⚙️  FREE RTOS STATUS  ⚙️  ===\n");
+    Serial.printf("💾 Memory: %s / %s (%.1f%% used)\n", 
+                  formatMemory(usedHeap).c_str(), 
+                  formatMemory(totalHeap).c_str(), 
+                  usedPercent);
 
     // Task states
-    if (audioTaskHandle)
-    {
-      Serial.printf("AudioTask state: %d\n", eTaskGetState(audioTaskHandle));
+    if (audioTaskHandle) {
+      Serial.printf("🎵 AudioTask: %s\n", 
+                    eTaskGetState(audioTaskHandle) == eRunning ? "Running" : "Stopped");
     }
-    if (muxTaskHandle)
-    {
-      Serial.printf("MuxTask state: %d\n", eTaskGetState(muxTaskHandle));
+    if (muxTaskHandle) {
+      Serial.printf("🎛️  MuxTask: %s\n", 
+                    eTaskGetState(muxTaskHandle) == eRunning ? "Running" : "Stopped");
     }
     Serial.println();
   }
-  /*
+
+    /*
     for (uint8_t i = 0; i < 16; ++i)
     {
       float raw = muxController.get(0, 0);
@@ -203,4 +217,5 @@ void loop()
       delay(5);
     }
   */
+
 }
