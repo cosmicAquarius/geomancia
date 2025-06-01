@@ -1,17 +1,18 @@
-#include "Sequencer.h"
-#include "AudioTools.h"
+#include <Sequencer.h>
+#include <AudioTools.h>
+#include <TibetanBowl.h>
 
-// Table des fréquences basée sur les defines AudioTools
+// Note frequencies table based on AudioTools defines
 const float Sequencer::note_frequencies[] = {
-    N_C0, N_CS0, N_D0, N_DS0, N_E0, N_F0, N_FS0, N_G0, N_GS0, N_A0, N_AS0, N_B0,    // Octave 0
-    N_C1, N_CS1, N_D1, N_DS1, N_E1, N_F1, N_FS1, N_G1, N_GS1, N_A1, N_AS1, N_B1,    // Octave 1
-    N_C2, N_CS2, N_D2, N_DS2, N_E2, N_F2, N_FS2, N_G2, N_GS2, N_A2, N_AS2, N_B2,    // Octave 2
-    N_C3, N_CS3, N_D3, N_DS3, N_E3, N_F3, N_FS3, N_G3, N_GS3, N_A3, N_AS3, N_B3,    // Octave 3
-    N_C4, N_CS4, N_D4, N_DS4, N_E4, N_F4, N_FS4, N_G4, N_GS4, N_A4, N_AS4, N_B4,    // Octave 4
-    N_C5, N_CS5, N_D5, N_DS5, N_E5, N_F5, N_FS5, N_G5, N_GS5, N_A5, N_AS5, N_B5,    // Octave 5
-    N_C6, N_CS6, N_D6, N_DS6, N_E6, N_F6, N_FS6, N_G6, N_GS6, N_A6, N_AS6, N_B6,    // Octave 6
-    N_C7, N_CS7, N_D7, N_DS7, N_E7, N_F7, N_FS7, N_G7, N_GS7, N_A7, N_AS7, N_B7,    // Octave 7
-    N_C8, N_CS8, N_D8, N_DS8, N_E8, N_F8, N_FS8, N_G8, N_GS8, N_A8, N_AS8, N_B8     // Octave 8
+    N_C0, N_CS0, N_D0, N_DS0, N_E0, N_F0, N_FS0, N_G0, N_GS0, N_A0, N_AS0, N_B0,
+    N_C1, N_CS1, N_D1, N_DS1, N_E1, N_F1, N_FS1, N_G1, N_GS1, N_A1, N_AS1, N_B1,
+    N_C2, N_CS2, N_D2, N_DS2, N_E2, N_F2, N_FS2, N_G2, N_GS2, N_A2, N_AS2, N_B2,
+    N_C3, N_CS3, N_D3, N_DS3, N_E3, N_F3, N_FS3, N_G3, N_GS3, N_A3, N_AS3, N_B3,
+    N_C4, N_CS4, N_D4, N_DS4, N_E4, N_F4, N_FS4, N_G4, N_GS4, N_A4, N_AS4, N_B4,
+    N_C5, N_CS5, N_D5, N_DS5, N_E5, N_F5, N_FS5, N_G5, N_GS5, N_A5, N_AS5, N_B5,
+    N_C6, N_CS6, N_D6, N_DS6, N_E6, N_F6, N_FS6, N_G6, N_GS6, N_A6, N_AS6, N_B6,
+    N_C7, N_CS7, N_D7, N_DS7, N_E7, N_F7, N_FS7, N_G7, N_GS7, N_A7, N_AS7, N_B7,
+    N_C8, N_CS8, N_D8, N_DS8, N_E8, N_F8, N_FS8, N_G8, N_GS8, N_A8, N_AS8, N_B8
 };
 
 const uint8_t Sequencer::NUM_NOTES = sizeof(note_frequencies) / sizeof(note_frequencies[0]);
@@ -24,15 +25,16 @@ Sequencer::Sequencer()
     , gate_off_time(0)
     , state(STOPPED)
     , gate_active(false)
-    , step_changed(false)
     , audio_generator(nullptr)
+    , bowl_generator(nullptr)
+    , use_bowl_mode(false)
 {
     calculateStepDuration();
     
-    // Initialise un pattern par défaut (gamme de Do majeur)
+    // Initialize default pattern
     for (uint8_t i = 0; i < MAX_STEPS; i++) {
         steps[i].active = false;
-        steps[i].frequency = N_C4;  // Do4 par défaut
+        steps[i].frequency = N_C4;
         steps[i].velocity = 100;
         steps[i].gate_length = 50;
     }
@@ -56,6 +58,16 @@ void Sequencer::setNumSteps(uint8_t steps) {
 
 void Sequencer::setAudioGenerator(audio_tools::SineWaveGenerator<int16_t>* generator) {
     audio_generator = generator;
+}
+
+void Sequencer::setBowlGenerator(TibetanBowl* bowl) {
+    bowl_generator = bowl;
+    Serial.println("Bowl generator connected to sequencer");
+}
+
+void Sequencer::setBowlMode(bool enable) {
+    use_bowl_mode = enable;
+    Serial.printf("Sequencer bowl mode: %s\n", enable ? "ENABLED" : "DISABLED");
 }
 
 void Sequencer::play() {
@@ -119,7 +131,7 @@ Sequencer::Step Sequencer::getStep(uint8_t step_index) const {
     if (step_index < MAX_STEPS) {
         return steps[step_index];
     }
-    return Step(); // Retourne un step vide si index invalide
+    return Step();
 }
 
 void Sequencer::update() {
@@ -129,15 +141,14 @@ void Sequencer::update() {
     
     uint32_t current_time = millis();
     
-    // Vérifier si il faut passer au step suivant
+    // Check if we need to advance to next step
     if (current_time - last_step_time >= step_duration_ms) {
         nextStep();
         triggerStep();
         last_step_time = current_time;
-        step_changed = true;
     }
     
-    // Vérifier si il faut éteindre le gate
+    // Check if we need to turn off gate
     if (gate_active && current_time >= gate_off_time) {
         stopGate();
     }
@@ -147,7 +158,7 @@ float Sequencer::getNoteFrequency(uint8_t note_index) {
     if (note_index < NUM_NOTES) {
         return note_frequencies[note_index];
     }
-    return N_A4; // La4 par défaut si index invalide
+    return N_A4;
 }
 
 void Sequencer::printStatus() const {
@@ -159,6 +170,7 @@ void Sequencer::printStatus() const {
     Serial.printf("Steps: %d/%d\n", num_steps, MAX_STEPS);
     Serial.printf("Current Step: %d\n", current_step);
     Serial.printf("Gate: %s\n", gate_active ? "ACTIVE" : "INACTIVE");
+    Serial.printf("Bowl Mode: %s\n", use_bowl_mode ? "ON" : "OFF");
     Serial.printf("Step Duration: %d ms\n", step_duration_ms);
     Serial.println();
 }
@@ -177,7 +189,7 @@ void Sequencer::printPattern() const {
 }
 
 void Sequencer::calculateStepDuration() {
-    // Pour des 16ème notes : 60000ms / BPM / 4
+    // For 16th notes: 60000ms / BPM / 4
     step_duration_ms = (60000 / bpm) / 4;
 }
 
@@ -188,29 +200,36 @@ void Sequencer::triggerStep() {
     
     const Step& step = steps[current_step];
     
-    if (step.active && audio_generator) {
-        // Déclencher la note
-        audio_generator->begin(AudioInfo(44100, 2, 16), step.frequency);
-        gate_active = true;
+    if (step.active) {
+        if (use_bowl_mode && bowl_generator) {
+            // Use Tibetan Bowl
+            float velocity_normalized = step.velocity / 127.0f;
+            bowl_generator->strike(step.frequency, velocity_normalized);
+            Serial.printf("🎌 Bowl Step %d: %.2f Hz\n", current_step, step.frequency);
+        } else if (audio_generator) {
+            // Use normal sine wave
+            audio_generator->begin(audio_tools::AudioInfo(44100, 2, 16), step.frequency);
+            Serial.printf("🎵 Sine Step %d: %.2f Hz\n", current_step, step.frequency);
+        } else {
+            Serial.println("⚠️ No audio generator set!");
+            return;
+        }
         
-        // Calculer quand éteindre le gate
+        gate_active = true;
         uint32_t gate_duration = (step_duration_ms * step.gate_length) / 100;
         gate_off_time = millis() + gate_duration;
-        
-        Serial.printf("🎵 Step %d: %.2f Hz (Gate: %d ms)\n", 
-            current_step, step.frequency, gate_duration);
     }
 }
 
 void Sequencer::stopGate() {
     gate_active = false;
-    // On pourrait ici déclencher un ADSR release ou couper le son
-    // Pour l'instant, on laisse le son continuer (légato)
+    // Bowl handles its own release through ADSR
+    // Sine wave continues (legato mode)
 }
 
 void Sequencer::nextStep() {
     current_step++;
     if (current_step >= num_steps) {
-        current_step = 0; // Boucle
+        current_step = 0;
     }
 }

@@ -22,6 +22,7 @@ public:
     void end();
     I2SStream& getStream();
     bool isInitialized() const;
+
 };
 
 #endif

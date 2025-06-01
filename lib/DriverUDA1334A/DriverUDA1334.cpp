@@ -24,6 +24,7 @@ bool DriverUDA1334A::begin(const AudioInfo &info)
     config.i2s_format = I2S_STD_FORMAT;
     config.bits_per_sample = 16;
 
+
     // I2S startup
     if (!i2s.begin(config))
     {
@@ -52,3 +53,4 @@ bool DriverUDA1334A::isInitialized() const
 {
     return initialized;
 }
+

@@ -6,7 +6,7 @@
 #include "FS.h"
 #include <MuxController.h>
 #include <DriverUDA1334A.h>
-#include "Sequencer.h"
+#include <SynthController.h>
 
 #define I2S_DOUT 25
 #define I2S_BCLK 27
@@ -15,18 +15,14 @@
 // Audio configuration
 AudioInfo info(44100, 2, 16);
 
-// Amplitude
-SineWaveGenerator<int16_t> sineWave(32000);
-GeneratedSoundStream<int16_t> sound(sineWave);
-
-// Driver UDA1334A (contient déjà l'I2SStream)
+// Driver UDA1334A (already contains I2SStream)
 DriverUDA1334A driverUDA1334A;
 
-// StreamCopy sera initialisé après le driver dans setupAudio()
-StreamCopy* copier = nullptr;
+// StreamCopy will be initialized after driver in setupAudio()
+StreamCopy *copier = nullptr;
 
-// Sequencer instance
-Sequencer sequencer;
+// SynthController instance
+SynthController synthesizer;
 
 MuxController muxController;
 
@@ -43,8 +39,9 @@ void audioTask(void *parameter)
 {
   Serial.println("Audio Task started on Core " + String(xPortGetCoreID()));
 
-  if (!copier) {
-    Serial.println("Erreur: copier non initialisé");
+  if (!copier)
+  {
+    Serial.println("Error: copier not initialized");
     vTaskDelete(NULL);
     return;
   }
@@ -53,9 +50,9 @@ void audioTask(void *parameter)
 
   while (audioRunning)
   {
-    // Update sequencer before audio processing
-    sequencer.update();
-    
+    // Update synthesizer (includes sequencer)
+    synthesizer.update();
+
     // Continuous audio stream copy
     copier->copy();
 
@@ -98,72 +95,45 @@ void muxTask(void *parameter)
 void setupAudio()
 {
   Serial.println("Audio initialization...");
- 
-  // Initialisez le driver UDA1334A
-  if (!driverUDA1334A.begin(info)) {
-    Serial.println("Erreur: Impossible d'initialiser UDA1334A");
+
+  // Initialize driver UDA1334A
+  if (!driverUDA1334A.begin(info))
+  {
+    Serial.println("Error: Cannot initialize UDA1334A");
+    return;
+  }
+  
+  // Initialize synthesizer
+  if (!synthesizer.begin(info))
+  {
+    Serial.println("Error: Cannot initialize synthesizer");
     return;
   }
 
-  // Sound generator configuration
-  sound.begin(info);
-  // Default frequency - will be controlled by sequencer
-  sineWave.begin(info, N_A4);
+  synthesizer.enableBowlMode(true); 
+  // Set volume to 50%
+  // Create StreamCopy AFTER initialization
+  copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
+  
 
-  // Créez le StreamCopy APRÈS l'initialisation du driver
-  copier = new StreamCopy(driverUDA1334A.getStream(), sound);
-
-  Serial.println("Audio initialized - 440Hz stereo");
+  Serial.println("Audio initialized successfully");
 }
 
-void setupSequencer()
+void setupSynthesizer()
 {
-  Serial.println("Sequencer initialization...");
-  
-  // Connect sequencer to audio generator
-  sequencer.setAudioGenerator(&sineWave);
-  
-  // Jazz tempo
-  sequencer.setBPM(140);
-  sequencer.setNumSteps(32);
-  
-  // Jazz chord progression notes - Cmaj7, Am7, Dm7, G7
-  float jazzNotes[] = {
-    N_C4, N_E4, N_G4, N_B4,    // Cmaj7
-    N_A3, N_C4, N_E4, N_G4,    // Am7
-    N_D4, N_F4, N_A4, N_C5,    // Dm7
-    N_G3, N_B3, N_D4, N_F4,    // G7
-    N_C5, N_E5, N_G5,          // Higher octave variations
-    N_A4, N_F4, N_D5
-  };
-  
-  // Seed random generator
-  randomSeed(analogRead(A0));
-  
-  // Create jazzy pattern with random elements
-  for (uint8_t i = 0; i < 32; i++) {
-    bool active = (i % 3 != 2) || (random(100) < 30); // Skip some steps for swing feel
-    
-    if (active) {
-      // Pick random jazz note
-      float note = jazzNotes[random(sizeof(jazzNotes)/sizeof(jazzNotes[0]))];
-      
-      // Random velocity (60-127 for dynamics)
-      uint8_t velocity = random(60, 128);
-      
-      // Random gate length (20-90% for articulation variety)
-      uint8_t gate = random(20, 91);
-      
-      sequencer.setStep(i, true, note, velocity, gate);
-    } else {
-      sequencer.setStep(i, false, N_C4, 100, 50);
-    }
-  }
-  
+  Serial.println("Creating synthesizer pattern...");
+
+  // Use mux controller for random seed
+  uint16_t raw = muxController.get(0, 0);
+
+  // Create African-style pattern
+  //synthesizer.createJazzPattern(64, 120, raw);
+  synthesizer.createBowlPattern(64, 90, analogRead(0));
+
   // Start playing immediately
-  sequencer.play();
-  
-  Serial.println("Jazz sequencer initialized and playing");
+  synthesizer.playSequencer();
+
+
 }
 
 void setupTasks()
@@ -213,79 +183,90 @@ void setup()
 
   // wait for serial to stabilize
   delay(1000);
-  Serial.println("\n=== ESP32 Audio Synthesizer with Sequencer ===\n");
+  Serial.println("\n=== ESP32 Audio Synthesizer with Pattern Generator ===\n");
 
   // Setup ADC
   analogSetWidth(12);
   analogSetAttenuation(ADC_ATTENDB_MAX);
 
-  // Setup audio
+  // Setup audio and synthesizer
   setupAudio();
-  
-  // Setup sequencer
-  setupSequencer();
+
+  // Setup synthesizer pattern
+  setupSynthesizer();
 
   // create tasks
   setupTasks();
 
-  Serial.println("Setup completed. Sequencer playing automatically.\n");
+  Serial.println("Setup completed. African pattern playing automatically.\n");
 }
 
-// Fonction utilitaire pour formater la mémoire
-String formatMemory(uint32_t bytes) {
-  if (bytes >= 1024 * 1024) {
+// Memory formatting utility function
+String formatMemory(uint32_t bytes)
+{
+  if (bytes >= 1024 * 1024)
+  {
     return String(bytes / 1024.0 / 1024.0, 1) + " MB";
-  } else if (bytes >= 1024) {
+  }
+  else if (bytes >= 1024)
+  {
     return String(bytes / 1024.0, 1) + " KB";
-  } else {
+  }
+  else
+  {
     return String(bytes) + " B";
   }
 }
 
-// Dans votre loop() :
-void loop() {
+// Main loop
+void loop()
+{
   static unsigned long lastMonitor = 0;
-  
-  if (millis() - lastMonitor > 5000) {
+
+  if (millis() - lastMonitor > 5000)
+  {
     lastMonitor = millis();
 
-    // Calculs mémoire
+    // Memory calculations
     uint32_t freeHeap = ESP.getFreeHeap();
     uint32_t totalHeap = ESP.getHeapSize();
     uint32_t usedHeap = totalHeap - freeHeap;
     float usedPercent = (usedHeap * 100.0) / totalHeap;
 
     Serial.printf("=== ⚙️  FREE RTOS STATUS  ⚙️  ===\n");
-    Serial.printf("💾 Memory: %s / %s (%.1f%% used)\n", 
-                  formatMemory(usedHeap).c_str(), 
-                  formatMemory(totalHeap).c_str(), 
+    Serial.printf("💾 Memory: %s / %s (%.1f%% used)\n",
+                  formatMemory(usedHeap).c_str(),
+                  formatMemory(totalHeap).c_str(),
                   usedPercent);
 
     // Task states
-    if (audioTaskHandle) {
-      Serial.printf("🎵 AudioTask: %s\n", 
+    if (audioTaskHandle)
+    {
+      Serial.printf("🎵 AudioTask: %s\n",
                     eTaskGetState(audioTaskHandle) == eRunning ? "Running" : "Stopped");
     }
-    if (muxTaskHandle) {
-      Serial.printf("🎛️  MuxTask: %s\n", 
+    if (muxTaskHandle)
+    {
+      Serial.printf("🎛️  MuxTask: %s\n",
                     eTaskGetState(muxTaskHandle) == eRunning ? "Running" : "Stopped");
     }
-    
-    // Sequencer status
-    Serial.printf("🎼 Sequencer: Step %d/%d | BPM %d\n",
-                  sequencer.getCurrentStep() + 1,
-                  sequencer.getNumSteps(),
-                  sequencer.getBPM());
-    
+
+    // Synthesizer status
+    Serial.printf("🎼 Synthesizer: Step %d/%d | BPM %d | %s\n",
+                  synthesizer.getCurrentStep() + 1,
+                  synthesizer.getNumSteps(),
+                  synthesizer.getBPM(),
+                  synthesizer.isPlaying() ? "Playing" : "Stopped");
+
     Serial.println();
   }
 
-    /*
-    for (uint8_t i = 0; i < 16; ++i)
-    {
-      float raw = muxController.get(0, 0);
-      plotValues(0, (uint16_t)raw);
-      delay(5);
-    }
-  */
+  /*
+  for (uint8_t i = 0; i < 16; ++i)
+  {
+    float raw = muxController.get(0, 0);
+    plotValues(0, (uint16_t)raw);
+    delay(5);
+  }
+*/
 }
