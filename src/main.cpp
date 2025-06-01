@@ -6,7 +6,6 @@
 #include "FS.h"
 #include <MuxController.h>
 
-
 #define SD_CS 5
 #define SPI_MOSI 23
 #define SPI_MISO 19
@@ -29,8 +28,6 @@ MuxController muxController;
 // FreeRTOS task handles
 TaskHandle_t audioTaskHandle = NULL;
 TaskHandle_t muxTaskHandle = NULL;
-
-
 
 volatile bool audioRunning = false;
 
@@ -187,7 +184,6 @@ void loop()
     Serial.printf("=== STATUS ===\n");
     Serial.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
 
-
     // Task states
     if (audioTaskHandle)
     {
@@ -199,11 +195,12 @@ void loop()
     }
     Serial.println();
   }
-
-  for (uint8_t i = 0; i < 16; ++i)
-  {
-    float raw = muxController.get(0, 0);
-    plotValues(1, (uint16_t)raw);
-    delay(5);
-  }
+  /*
+    for (uint8_t i = 0; i < 16; ++i)
+    {
+      float raw = muxController.get(0, 0);
+      plotValues(0, (uint16_t)raw);
+      delay(5);
+    }
+  */
 }

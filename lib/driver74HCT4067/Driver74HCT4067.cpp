@@ -2,7 +2,7 @@
 #include "driver/gpio.h"
 #include "soc/gpio_struct.h"
 
-#define MUX_SETTLING_TIME_US 500
+#define MUX_SETTLING_TIME_US 10
 
 Driver74HCT4067::Driver74HCT4067(uint8_t s0Pin, uint8_t s1Pin, uint8_t s2Pin, uint8_t s3Pin,
                                  uint8_t enPin, uint8_t sigPin, bool capacitive)
