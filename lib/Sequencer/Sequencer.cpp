@@ -41,7 +41,7 @@ Sequencer::Sequencer()
 }
 
 void Sequencer::setBPM(uint16_t new_bpm) {
-    if (new_bpm >= 60 && new_bpm <= 200) {
+    if (new_bpm >= 15 && new_bpm <= 200) {
         bpm = new_bpm;
         calculateStepDuration();
     }
@@ -205,7 +205,7 @@ void Sequencer::triggerStep() {
             // Use Tibetan Bowl
             float velocity_normalized = step.velocity / 127.0f;
             bowl_generator->strike(step.frequency, velocity_normalized);
-            Serial.printf("🎌 Bowl Step %d: %.2f Hz\n", current_step, step.frequency);
+          //  Serial.printf("🎌 Bowl Step %d: %.2f Hz\n", current_step, step.frequency);
         } else if (audio_generator) {
             // Use normal sine wave
             audio_generator->begin(audio_tools::AudioInfo(44100, 2, 16), step.frequency);
@@ -223,8 +223,9 @@ void Sequencer::triggerStep() {
 
 void Sequencer::stopGate() {
     gate_active = false;
-    // Bowl handles its own release through ADSR
-    // Sine wave continues (legato mode)
+    if (use_bowl_mode && bowl_generator) {
+        bowl_generator->release(); 
+    }
 }
 
 void Sequencer::nextStep() {

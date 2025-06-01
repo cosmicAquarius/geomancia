@@ -12,26 +12,26 @@ const float SynthController::range[] = {
     N_E2, N_G2, N_A2, N_B2, N_D3, // Triple for emphasis
 
     // Em pentatonic scale - base octave (main range)
-    N_E3, N_G3, N_A3, N_B3, N_D4,
-    N_E3, N_G3, N_A3, N_B3, N_D4, // Duplicate for more mid probability
-    N_E3, N_G3, N_A3, N_B3, N_D4, // Triple for emphasis
+    N_E3, N_G3, N_A3, N_B3, N_D1,
+    N_E3, N_G3, N_A3, N_B3, N_D1, // Duplicate for more mid probability
+    N_E3, N_G3, N_A3, N_B3, N_D1, // Triple for emphasis
 
     // Power chords and intervals (bass/mid range)
     N_E2, N_B2, // Perfect 5th bass
     N_G2, N_D3, // Perfect 5th bass
     N_A2, N_E3, // Perfect 5th bass to mid
     N_E3, N_B3, // Perfect 5th mid
-    N_G3, N_D4, // Perfect 5th mid
+    N_G3, N_D1, // Perfect 5th mid
 
     // Octave pairs for resonance (bass/mid focused)
     N_E2, N_E3, // Bass octave E
     N_G2, N_G3, // Bass octave G
     N_A2, N_A3, // Bass octave A
     N_B2, N_B3, // Bass octave B
-    N_D3, N_D4, // Bass octave D
+    N_D3, N_D1, // Bass octave D
 
     // Additional harmonic notes (lower register only)
-    N_F2, N_C3, N_F3, N_C4, // Color tones in lower registers
+    N_F2, N_C3, N_F3, N_C1, // Color tones in lower registers
 
     // Very low bass for deep foundation
     N_E1, N_G1, N_A1 // Sub-bass notes
@@ -190,12 +190,12 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
     for (uint8_t i = 0; i < numSteps; i++)
     {
         // Bowl pattern: sparse, meditative spacing
-        bool active = (i % 4 == 0) || (i % 7 == 0) || (random(100) < 60);
+        bool active = (i % 4 == 0) || (i % 7 == 0) || (random(100) < 80);
 
         if (active)
         {
             float note = range[random(numBowlFreqs)];
-            uint8_t velocity = random(20, 60); // Gentle dynamics
+            uint8_t velocity = random(10, 6050); // Gentle dynamics
             uint8_t gate = random(85, 99);     // Very long sustains
 
             sequencer.setStep(i, true, note, velocity, gate);
@@ -224,7 +224,7 @@ void SynthController::generateRandomPattern(uint8_t numSteps, uint16_t bpm, uint
 
     for (uint8_t i = 0; i < numSteps; i++)
     {
-        bool active = random(100) < 65; // 65% chance of active step
+        bool active = random(100) < 90; // 65% chance of active step
 
         if (active)
         {
@@ -289,7 +289,7 @@ void SynthController::pauseSequencer()
     Serial.println("Sequencer paused");
 }
 
-audio_tools::AudioEffectStream* SynthController::getAudioStream()
+audio_tools::AudioEffectStream *SynthController::getAudioStream()
 {
     return tibetanBowl->getAudioStream(); // Toujours le bol
 }

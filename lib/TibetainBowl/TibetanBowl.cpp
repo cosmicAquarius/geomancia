@@ -59,10 +59,10 @@ void TibetanBowl::strike(float frequency, float velocity)
     // Trigger ADSR envelope
     if (adsr)
     {
+        Serial.printf("🎌 ADSR before keyOn: active=%d\n", adsr->isActive());
         adsr->keyOn(velocity);
+        Serial.printf("🎌 ADSR after keyOn: active=%d\n", adsr->isActive());
     }
-
-    Serial.printf("🎌 Bowl strike at %.2f Hz\n", frequency);
 }
 
 void TibetanBowl::release()
@@ -70,19 +70,6 @@ void TibetanBowl::release()
     if (adsr)
     {
         adsr->keyOff();
-    }
-}
-
-void TibetanBowl::setADSR(float attack, float decay, float sustain, float release)
-{
-    if (adsr)
-    {
-        // Convert seconds to samples for AudioTools ADSR
-
-        // Note: AudioTools ADSR constructor takes (attack, decay, sustain_level, release)
-        // We need to recreate the ADSR with new parameters
-        delete adsr;
-        adsr = new audio_tools::ADSRGain(attack, decay, sustain, release);
     }
 }
 
@@ -127,6 +114,10 @@ void TibetanBowl::initializeComponents()
     stream2->begin(info);
     stream3->begin(info);
 
+
+    adsr = new audio_tools::ADSRGain(0.001f, 0.002f, 0.8f, 0.0005f);
+ 
+
     vco1->begin(info, 55.0f);
     vco2->begin(info, 110.0f); // 2nd harmonic
     vco3->begin(info, 165.0f); // 3rd harmonic
@@ -137,13 +128,28 @@ void TibetanBowl::initializeComponents()
 
     // Create ADSR with bowl-like envelope
     // Long attack, moderate decay, high sustain, very long release
-    adsr = new audio_tools::ADSRGain(3.0f, 2.5f, 2.8f, 15.0f);
+
+    
 
     effectStream = new audio_tools::AudioEffectStream(mixer);
-    effectStream->addEffect(*adsr);
+    effectStream->addEffect(adsr);
     effectStream->begin(info);
+    Serial.printf("🔍 Effects in stream: %d\n", effectStream->size());
+  
+    Serial.printf("🔍 EffectStream pointer: %p\n", effectStream);
+    Serial.printf("🔍 ADSR pointer: %p\n", adsr);
 }
 
+void TibetanBowl::setADSR(float attack, float decay, float sustain, float release)
+{
+    if (adsr)
+    {
+        adsr->setAttackRate(attack);
+        adsr->setDecayRate(decay);
+        adsr->setSustainLevel(sustain);
+        adsr->setReleaseRate(release);
+    }
+}
 void TibetanBowl::updateFrequencies()
 {
     if (!vco1 || !vco2 || !vco3)
@@ -179,5 +185,8 @@ audio_tools::InputMixer<int16_t>* TibetanBowl::getAudioStream() {
 */
 audio_tools::AudioEffectStream* TibetanBowl::getAudioStream()
 {
+    Serial.printf("🎯 Returning effectStream: %p\n", effectStream);
     return effectStream;
+
+    
 }
