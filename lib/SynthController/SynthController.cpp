@@ -175,8 +175,9 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
 
     if (seedValue == 0)
     {
-        seedValue = analogRead(A0);
+        seedValue = analogRead(A0) + millis();
     }
+    Serial.printf("🎲 Random seed: %d\n", seedValue);
 
     sequencer.setBPM(bpm);
     sequencer.setNumSteps(numSteps);
@@ -288,7 +289,7 @@ void SynthController::pauseSequencer()
     Serial.println("Sequencer paused");
 }
 
-audio_tools::InputMixer<int16_t> *SynthController::getAudioStream()
+audio_tools::AudioEffectStream* SynthController::getAudioStream()
 {
     return tibetanBowl->getAudioStream(); // Toujours le bol
 }

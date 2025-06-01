@@ -22,6 +22,7 @@ private:
 
     // Audio configuration
     audio_tools::AudioInfo info;
+    audio_tools::AudioEffectStream* effectStream;
 
     // Bowl parameters
     float fundamental_freq;
@@ -57,7 +58,9 @@ public:
     void setADSR(float attack = 0.1f, float decay = 0.2f, float sustain = 0.7f, float release = 8.0f);
     void setHarmonicLevels(float vco1 = 1.0f, float vco2 = 0.6f, float vco3 = 0.3f);
     void setBeating(float vco2_cents = 3.0f, float vco3_cents = -2.5f);
-    audio_tools::InputMixer<int16_t>* getAudioStream();
+   // audio_tools::InputMixer<int16_t>* getAudioStream();
+    audio_tools::AudioEffectStream* getAudioStream();
+
     // Status
     bool isActive() const;
 

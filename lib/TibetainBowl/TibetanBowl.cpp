@@ -1,81 +1,84 @@
 #include <TibetanBowl.h>
 
 TibetanBowl::TibetanBowl()
-    : vco1(nullptr)
-    , vco2(nullptr) 
-    , vco3(nullptr)
-    , stream1(nullptr)
-    , stream2(nullptr)
-    , stream3(nullptr)
-    , adsr(nullptr)
-    , info(44100, 2, 16)
-    , fundamental_freq(440.0f)
-    , vco1_level(1.0f)
-    , vco2_level(0.6f)
-    , vco3_level(0.3f)
-    , vco2_detune(3.0f)
-    , vco3_detune(-2.5f)
-    , current_sample(0)
+    : vco1(nullptr), vco2(nullptr), vco3(nullptr), stream1(nullptr), stream2(nullptr), stream3(nullptr), adsr(nullptr), info(44100, 2, 16), fundamental_freq(440.0f), vco1_level(1.0f), vco2_level(0.6f), vco3_level(0.3f), vco2_detune(3.0f), vco3_detune(-2.5f), current_sample(0)
 {
 }
 
-TibetanBowl::~TibetanBowl() {
+TibetanBowl::~TibetanBowl()
+{
 
-    if (adsr) delete adsr;
-    if (stream3) delete stream3;
-    if (stream2) delete stream2;
-    if (stream1) delete stream1;
-    if (vco3) delete vco3;
-    if (vco2) delete vco2;
-    if (vco1) delete vco1;
+    if (adsr)
+        delete adsr;
+    if (stream3)
+        delete stream3;
+    if (stream2)
+        delete stream2;
+    if (stream1)
+        delete stream1;
+    if (vco3)
+        delete vco3;
+    if (vco2)
+        delete vco2;
+    if (vco1)
+        delete vco1;
+    if (effectStream)
+        delete effectStream;
 }
 
-bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo) {
+bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo)
+{
     info = audioInfo;
-    
+
     Serial.println("TibetanBowl initialization...");
-    
+
     initializeComponents();
-    
-    if (!vco1 || !vco2 || !vco3 || !adsr) {
+
+    if (!vco1 || !vco2 || !vco3 || !adsr)
+    {
         Serial.println("Error: Failed to initialize TibetanBowl components");
         return false;
     }
-    
+
     // Set default bowl parameters
     setADSR();
     setHarmonicLevels();
     setBeating();
-    
+
     Serial.println("TibetanBowl initialized successfully");
     return true;
 }
 
-void TibetanBowl::strike(float frequency, float velocity) {
+void TibetanBowl::strike(float frequency, float velocity)
+{
     fundamental_freq = frequency;
-    
+
     // Update all VCO frequencies with harmonics and beating
     updateFrequencies();
-    
+
     // Trigger ADSR envelope
-    if (adsr) {
+    if (adsr)
+    {
         adsr->keyOn(velocity);
     }
-    
+
     Serial.printf("🎌 Bowl strike at %.2f Hz\n", frequency);
 }
 
-void TibetanBowl::release() {
-    if (adsr) {
+void TibetanBowl::release()
+{
+    if (adsr)
+    {
         adsr->keyOff();
     }
 }
 
-
-void TibetanBowl::setADSR(float attack, float decay, float sustain, float release) {
-    if (adsr) {
+void TibetanBowl::setADSR(float attack, float decay, float sustain, float release)
+{
+    if (adsr)
+    {
         // Convert seconds to samples for AudioTools ADSR
- 
+
         // Note: AudioTools ADSR constructor takes (attack, decay, sustain_level, release)
         // We need to recreate the ADSR with new parameters
         delete adsr;
@@ -83,83 +86,98 @@ void TibetanBowl::setADSR(float attack, float decay, float sustain, float releas
     }
 }
 
-void TibetanBowl::setHarmonicLevels(float vco1, float vco2, float vco3) {
+void TibetanBowl::setHarmonicLevels(float vco1, float vco2, float vco3)
+{
     vco1_level = vco1;
     vco2_level = vco2;
     vco3_level = vco3;
 }
 
-void TibetanBowl::setBeating(float vco2_cents, float vco3_cents) {
+void TibetanBowl::setBeating(float vco2_cents, float vco3_cents)
+{
     vco2_detune = vco2_cents;
     vco3_detune = vco3_cents;
-    
+
     // Update frequencies if already playing
-    if (fundamental_freq > 0) {
+    if (fundamental_freq > 0)
+    {
         updateFrequencies();
     }
 }
 
-bool TibetanBowl::isActive() const {
+bool TibetanBowl::isActive() const
+{
     return adsr ? adsr->isActive() : false;
 }
 
-void TibetanBowl::initializeComponents() {
+void TibetanBowl::initializeComponents()
+{
     // Create three VCOs with moderate amplitude
     vco1 = new audio_tools::SawToothGenerator<int16_t>(10000);
     vco2 = new audio_tools::SquareWaveGenerator<int16_t>(10000);
     vco3 = new audio_tools::SawToothGenerator<int16_t>(10000);
-    
+
     // Create streams for each VCO
     stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
     stream2 = new audio_tools::GeneratedSoundStream<int16_t>(*vco2);
     stream3 = new audio_tools::GeneratedSoundStream<int16_t>(*vco3);
-    
+
     // Initialize all components
     stream1->begin(info);
     stream2->begin(info);
     stream3->begin(info);
-    
-    vco1->begin(info, 55.0f);
-    vco2->begin(info, 110.0f);  // 2nd harmonic
-    vco3->begin(info, 165.0f); // 3rd harmonic
-    mixer.add(*stream1, 33); // 33% level for VCO1
-    mixer.add(*stream2,33); // 33% level for VCO2
-    mixer.add(*stream3,20); // 33% level for VCO3
-    mixer.begin(info);
-    
 
-    
+    vco1->begin(info, 55.0f);
+    vco2->begin(info, 110.0f); // 2nd harmonic
+    vco3->begin(info, 165.0f); // 3rd harmonic
+    mixer.add(*stream1, 33);   // 33% level for VCO1
+    mixer.add(*stream2, 33);   // 33% level for VCO2
+    mixer.add(*stream3, 20);   // 33% level for VCO3
+    mixer.begin(info);
+
     // Create ADSR with bowl-like envelope
     // Long attack, moderate decay, high sustain, very long release
-    adsr = new audio_tools::ADSRGain(3.0f, 0.5f, 0.8f, 15.0f);
+    adsr = new audio_tools::ADSRGain(3.0f, 2.5f, 2.8f, 15.0f);
+
+    effectStream = new audio_tools::AudioEffectStream(mixer);
+    effectStream->addEffect(*adsr);
+    effectStream->begin(info);
 }
 
-void TibetanBowl::updateFrequencies() {
-    if (!vco1 || !vco2 || !vco3) return;
-    
+void TibetanBowl::updateFrequencies()
+{
+    if (!vco1 || !vco2 || !vco3)
+        return;
+
     // VCO1: Fundamental frequency
     float freq1 = fundamental_freq;
-    
+
     // VCO2: 2nd harmonic with slight detuning for beating
     float freq2 = fundamental_freq * 2.0f * centsToRatio(vco2_detune);
-    
-    // VCO3: 3rd harmonic with slight detuning for beating  
+
+    // VCO3: 3rd harmonic with slight detuning for beating
     float freq3 = fundamental_freq * 3.0f * centsToRatio(vco3_detune);
-    
+
     // Update VCO frequencies
     vco1->setFrequency(freq1);
     vco2->setFrequency(freq2);
     vco3->setFrequency(freq3);
-    
+
     Serial.printf("🎶 Frequencies: %.2f Hz, %.2f Hz, %.2f Hz\n", freq1, freq2, freq3);
 }
 
-float TibetanBowl::centsToRatio(float cents) {
+float TibetanBowl::centsToRatio(float cents)
+{
     // Convert cents to frequency ratio
     // 100 cents = 1 semitone = ratio of 2^(1/12)
     return pow(2.0f, cents / 1200.0f);
 }
-
+/*
 audio_tools::InputMixer<int16_t>* TibetanBowl::getAudioStream() {
-    return &mixer; 
+    return &mixer;
+}
+*/
+audio_tools::AudioEffectStream* TibetanBowl::getAudioStream()
+{
+    return effectStream;
 }

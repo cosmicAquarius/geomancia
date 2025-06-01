@@ -110,8 +110,9 @@ void setupAudio()
     return;
   }
   synthesizer.enableBowlMode(true);
-  synthesizer.configureBowl(3.0f, 0.2f, 0.7f, 8.0f); 
-  synthesizer.createBowlPattern(16, 45, analogRead(0));
+  synthesizer.configureBowl(3.0f, 1.0f, 2.0f, 10.0f);
+  synthesizer.createBowlPattern(16, 45, analogRead(A0) + millis() );
+
   // Set volume to 50%
   // Create StreamCopy AFTER initialization
   copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
@@ -128,7 +129,7 @@ void setupSynthesizer()
 
   // Create African-style pattern
   // synthesizer.createJazzPattern(64, 120, raw);
-  synthesizer.createBowlPattern(64, 70, analogRead(0));
+  synthesizer.createBowlPattern(64, 70, analogRead(A0) + muxController.get(0, 0));
 
   // Start playing immediately
   synthesizer.playSequencer();

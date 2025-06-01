@@ -51,7 +51,7 @@ public:
     void enableBowlMode(bool enable = true);
     void strikeBowl(float frequency, float velocity = 1.0f);
     void configureBowl(float attack = 0.1f, float decay = 0.2f, float sustain = 0.7f, float release = 8.0f);
-    audio_tools::InputMixer<int16_t>* getAudioStream();
+    audio_tools::AudioEffectStream* getAudioStream();
     // Getters for status
     uint8_t getCurrentStep() const { return sequencer.getCurrentStep(); }
     uint8_t getNumSteps() const { return sequencer.getNumSteps(); }
