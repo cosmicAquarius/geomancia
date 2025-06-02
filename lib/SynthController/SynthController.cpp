@@ -6,35 +6,22 @@
 
 // Natural Minor Pentatonic Scale (Em pentatonic) - bass and mid range only
 const float SynthController::range[] = {
-    // Bass foundation - heavy weight here
-    N_E2, N_G2, N_A2, N_B2, N_D3,
-    N_E2, N_G2, N_A2, N_B2, N_D3, // Duplicate for more bass probability
-    N_E2, N_G2, N_A2, N_B2, N_D3, // Triple for emphasis
-
-    // Em pentatonic scale - base octave (main range)
-    N_E3, N_G3, N_A3, N_B3, N_D1,
-    N_E3, N_G3, N_A3, N_B3, N_D1, // Duplicate for more mid probability
-    N_E3, N_G3, N_A3, N_B3, N_D1, // Triple for emphasis
-
-    // Power chords and intervals (bass/mid range)
-    N_E2, N_B2, // Perfect 5th bass
-    N_G2, N_D3, // Perfect 5th bass
-    N_A2, N_E3, // Perfect 5th bass to mid
-    N_E3, N_B3, // Perfect 5th mid
-    N_G3, N_D1, // Perfect 5th mid
-
-    // Octave pairs for resonance (bass/mid focused)
-    N_E2, N_E3, // Bass octave E
-    N_G2, N_G3, // Bass octave G
-    N_A2, N_A3, // Bass octave A
-    N_B2, N_B3, // Bass octave B
-    N_D3, N_D1, // Bass octave D
-
-    // Additional harmonic notes (lower register only)
-    N_F2, N_C3, N_F3, N_C1, // Color tones in lower registers
-
-    // Very low bass for deep foundation
-    N_E1, N_G1, N_A1 // Sub-bass notes
+  // Am natural minor scale - octave 1 (sub-bass)
+  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,
+  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,    // Duplicate for weight
+  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,    // Triple for emphasis
+  
+  // Perfect 5th intervals (Am chord tones)
+  N_A1, N_E1,     // A-E (root-5th)
+  N_C1, N_G1,     // C-G (♭III-♭VII)
+  N_F1, N_C1,     // F-C (♭VI-♭III)
+  N_D1, N_A1,     // D-A (iv-root)
+  
+  // Chord tones emphasis (Am-Dm-F-G progression)
+  N_A1, N_C1, N_E1,    // Am chord
+  N_D1, N_F1, N_A1,    // Dm chord  
+  N_F1, N_A1, N_C1,    // F chord
+  N_G1, N_B1, N_D1     // G chord
 };
 
 const uint8_t SynthController::NUM_NOTES = sizeof(range) / sizeof(range[0]);
@@ -121,13 +108,13 @@ void SynthController::createJazzPattern(uint8_t numSteps, uint16_t bpm, uint16_t
         {
             float note = range[random(NUM_NOTES)];
             uint8_t velocity = random(70, 128); // Dynamic variation
-            uint8_t gate = random(20, 70);      // Staccato feel
+            uint8_t gate = random(60, 70);      // Staccato feel
 
             sequencer.setStep(i, true, note, velocity, gate);
         }
         else
         {
-            sequencer.setStep(i, false, N_E4, 100, 50);
+            sequencer.setStep(i, false, N_E0, 100, 50);
         }
     }
 
@@ -136,37 +123,37 @@ void SynthController::createJazzPattern(uint8_t numSteps, uint16_t bpm, uint16_t
 
 void SynthController::createAfricanPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue)
 {
-    Serial.println("Creating African pattern...");
+   Serial.println("Creating African pattern...");
 
-    if (seedValue == 0)
-    {
-        seedValue = analogRead(A0);
-    }
+   if (seedValue == 0)
+   {
+       seedValue = analogRead(A0);
+   }
 
-    sequencer.setBPM(bpm);
-    sequencer.setNumSteps(numSteps);
-    randomSeed(seedValue);
+   sequencer.setBPM(bpm);
+   sequencer.setNumSteps(numSteps);
+   randomSeed(seedValue);
 
-    for (uint8_t i = 0; i < numSteps; i++)
-    {
-        // African polyrhythm - complex rhythm patterns
+   for (uint8_t i = 0; i < numSteps; i++)
+   {
+       // African polyrhythm - complex rhythm patterns
         bool active = (i % 3 != 2) || (random(100) < 35);
 
-        if (active)
-        {
-            float note = range[random(NUM_NOTES)];
+       if (active)
+       {
+           float note = range[random(NUM_NOTES)];
             uint8_t velocity = random(80, 120); // Consistent power
             uint8_t gate = random(60, 95);      // Sustained notes
 
-            sequencer.setStep(i, true, note, velocity, gate);
-        }
-        else
-        {
-            sequencer.setStep(i, false, N_E4, 100, 50);
-        }
-    }
+           sequencer.setStep(i, true, note, velocity, gate);
+       }
+       else
+       {
+            sequencer.setStep(i, false, N_E0, 100, 50);
+       }
+   }
 
-    Serial.printf("African pattern created: %d steps at %d BPM\n", numSteps, bpm);
+   Serial.printf("African pattern created: %d steps at %d BPM\n", numSteps, bpm);
 }
 
 void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue)
@@ -189,20 +176,27 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
 
     for (uint8_t i = 0; i < numSteps; i++)
     {
-        // Bowl pattern: sparse, meditative spacing
-        bool active = (i % 4 == 0) || (i % 7 == 0) || (random(100) < 80);
-
+        // African polyrhythm - complex rhythm patterns
+        bool active = (i % 3 != 2) || (random(100) < 40);
+ 
         if (active)
         {
-            float note = range[random(numBowlFreqs)];
-            uint8_t velocity = random(10, 6050); // Gentle dynamics
-            uint8_t gate = random(85, 99);     // Very long sustains
-
+            float note = range[random(NUM_NOTES)];
+            uint8_t velocity = random(10, 100); // Consistent power
+            
+            // Two gate ranges: 90% short notes, 10% long notes
+            uint8_t gate;
+            if (random(100) < 90) {
+                gate = random(60, 80);  // Short/rapid notes
+            } else {
+                gate = random(85, 100);  // Long sustained notes
+            }
+ 
             sequencer.setStep(i, true, note, velocity, gate);
         }
         else
         {
-            sequencer.setStep(i, false, N_E4, 100, 50);
+            sequencer.setStep(i, false, N_E1, 100, 50);
         }
     }
 
@@ -236,7 +230,7 @@ void SynthController::generateRandomPattern(uint8_t numSteps, uint16_t bpm, uint
         }
         else
         {
-            sequencer.setStep(i, false, N_E4, 100, 50);
+            sequencer.setStep(i, false, N_E0, 100, 50);
         }
     }
 

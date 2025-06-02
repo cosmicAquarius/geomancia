@@ -110,7 +110,7 @@ void setupAudio()
     return;
   }
   synthesizer.enableBowlMode(true);
-  synthesizer.createBowlPattern(16, 50, analogRead(A0) + millis() );
+  synthesizer.createBowlPattern(64, 200, analogRead(A0) + millis() );
   
   // Set volume to 50%
   // Create StreamCopy AFTER initialization

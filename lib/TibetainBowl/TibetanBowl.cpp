@@ -1,7 +1,16 @@
 #include <TibetanBowl.h>
 
 TibetanBowl::TibetanBowl()
-    : vco1(nullptr), vco2(nullptr), vco3(nullptr), stream1(nullptr), stream2(nullptr), stream3(nullptr), adsr(nullptr), info(44100, 2, 16), fundamental_freq(440.0f), vco1_level(1.0f), vco2_level(0.6f), vco3_level(0.3f), vco2_detune(3.0f), vco3_detune(-2.5f), current_sample(0)
+    : vco1(nullptr), vco2(nullptr), vco3(nullptr),
+      stream1(nullptr), stream2(nullptr), stream3(nullptr), adsr(nullptr),
+      info(44100, 2, 16), fundamental_freq(440.0f),
+      vco1_level(1.0f),
+      vco2_level(0.6f),
+      vco3_level(0.3f),
+      vco1_detune(0.0f),  // Fundamental - no detune
+      vco2_detune(5.0f),  // 2nd harmonic - slight sharp for slow beats
+      vco3_detune(-4.2f), // 3rd harmonic - slight flat for complex interference
+      current_sample(0)
 {
 }
 
@@ -40,10 +49,9 @@ bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo)
         return false;
     }
 
-    // Set default bowl parameters
-    setADSR();
-    setHarmonicLevels();
-    setBeating();
+  
+
+ 
 
     Serial.println("TibetanBowl initialized successfully");
     return true;
@@ -59,9 +67,7 @@ void TibetanBowl::strike(float frequency, float velocity)
     // Trigger ADSR envelope
     if (adsr)
     {
-        Serial.printf("🎌 ADSR before keyOn: active=%d\n", adsr->isActive());
         adsr->keyOn(velocity);
-        Serial.printf("🎌 ADSR after keyOn: active=%d\n", adsr->isActive());
     }
 }
 
@@ -80,8 +86,9 @@ void TibetanBowl::setHarmonicLevels(float vco1, float vco2, float vco3)
     vco3_level = vco3;
 }
 
-void TibetanBowl::setBeating(float vco2_cents, float vco3_cents)
+void TibetanBowl::setBeating(float vco1_cents, float vco2_cents, float vco3_cents)
 {
+    vco1_detune = vco1_cents; // Fundamental - no detune
     vco2_detune = vco2_cents;
     vco3_detune = vco3_cents;
 
@@ -100,42 +107,43 @@ bool TibetanBowl::isActive() const
 void TibetanBowl::initializeComponents()
 {
     // Create three VCOs with moderate amplitude
-    vco1 = new audio_tools::SawToothGenerator<int16_t>(10000);
-    vco2 = new audio_tools::SquareWaveGenerator<int16_t>(10000);
-    vco3 = new audio_tools::SawToothGenerator<int16_t>(10000);
+    vco1 = new audio_tools::SineWaveGenerator<int16_t>(10000);
+    vco2 = new audio_tools::SineWaveGenerator<int16_t>(10000);
+    vco3 = new audio_tools::SineWaveGenerator<int16_t>(10000);
 
     // Create streams for each VCO
     stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
     stream2 = new audio_tools::GeneratedSoundStream<int16_t>(*vco2);
     stream3 = new audio_tools::GeneratedSoundStream<int16_t>(*vco3);
 
+    vco1->begin(info);
+    vco2->begin(info); // 2nd harmonic
+    vco3->begin(info); // 3rd harmonic
+
     // Initialize all components
     stream1->begin(info);
     stream2->begin(info);
     stream3->begin(info);
 
-
-    adsr = new audio_tools::ADSRGain(0.001f, 0.002f, 0.8f, 0.0005f);
- 
-
-    vco1->begin(info, 55.0f);
-    vco2->begin(info, 110.0f); // 2nd harmonic
-    vco3->begin(info, 165.0f); // 3rd harmonic
-    mixer.add(*stream1, 33);   // 33% level for VCO1
-    mixer.add(*stream2, 33);   // 33% level for VCO2
-    mixer.add(*stream3, 20);   // 33% level for VCO3
+    mixer.add(*stream1, vco1_level * 100); // 33% level for VCO1
+    mixer.add(*stream2, vco2_level * 100); // 33% level for VCO2
+    mixer.add(*stream3, vco3_level * 100); // 33% level for VCO3
     mixer.begin(info);
+
+    adsr = new audio_tools::ADSRGain(
+        0.02f, // Attack rapide (10ms)
+        0.3f,  // Decay assez long (300ms)
+        0.4f,  // Sustain à 40%
+        2.0f   // Release très long (2 secondes)
+    );
 
     // Create ADSR with bowl-like envelope
     // Long attack, moderate decay, high sustain, very long release
-
-    
 
     effectStream = new audio_tools::AudioEffectStream(mixer);
     effectStream->addEffect(adsr);
     effectStream->begin(info);
     Serial.printf("🔍 Effects in stream: %d\n", effectStream->size());
-  
     Serial.printf("🔍 EffectStream pointer: %p\n", effectStream);
     Serial.printf("🔍 ADSR pointer: %p\n", adsr);
 }
@@ -156,7 +164,8 @@ void TibetanBowl::updateFrequencies()
         return;
 
     // VCO1: Fundamental frequency
-    float freq1 = fundamental_freq;
+    float freq1 = fundamental_freq * 1.0f * centsToRatio(vco1_detune);
+    ;
 
     // VCO2: 2nd harmonic with slight detuning for beating
     float freq2 = fundamental_freq * 2.0f * centsToRatio(vco2_detune);
@@ -169,7 +178,7 @@ void TibetanBowl::updateFrequencies()
     vco2->setFrequency(freq2);
     vco3->setFrequency(freq3);
 
-    Serial.printf("🎶 Frequencies: %.2f Hz, %.2f Hz, %.2f Hz\n", freq1, freq2, freq3);
+    Serial.printf("🎶 Frequencies: %.2f Hz\n", fundamental_freq);
 }
 
 float TibetanBowl::centsToRatio(float cents)
@@ -178,15 +187,9 @@ float TibetanBowl::centsToRatio(float cents)
     // 100 cents = 1 semitone = ratio of 2^(1/12)
     return pow(2.0f, cents / 1200.0f);
 }
-/*
-audio_tools::InputMixer<int16_t>* TibetanBowl::getAudioStream() {
-    return &mixer;
-}
-*/
-audio_tools::AudioEffectStream* TibetanBowl::getAudioStream()
+
+audio_tools::AudioEffectStream *TibetanBowl::getAudioStream()
 {
     Serial.printf("🎯 Returning effectStream: %p\n", effectStream);
     return effectStream;
-
-    
 }

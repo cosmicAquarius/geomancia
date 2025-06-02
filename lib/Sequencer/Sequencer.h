@@ -9,7 +9,7 @@ class TibetanBowl;
 
 class Sequencer {
 public:
-    static const uint8_t MAX_STEPS = 32;
+    static const uint8_t MAX_STEPS = 128;
     
     struct Step {
         bool active;
