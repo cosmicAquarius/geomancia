@@ -63,18 +63,13 @@ bool SynthController::begin(audio_tools::AudioInfo audioInfo)
         Serial.println("Warning: Failed to initialize TibetanBowl");
     }
 
-    if (!sineWave || !sound)
-    {
-        Serial.println("Error: Failed to initialize audio components");
-        return false;
-    }
 
     // Connect both generators to sequencer
     sequencer.setAudioGenerator(sineWave); // CETTE LIGNE MANQUAIT !
     sequencer.setBowlGenerator(tibetanBowl);
 
     // Start in sine mode by default
-    sequencer.setBowlMode(false);
+    sequencer.setBowlMode(true);
 
     Serial.println("SynthController initialized successfully");
     return true;

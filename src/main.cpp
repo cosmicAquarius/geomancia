@@ -103,33 +103,26 @@ void setupAudio()
     return;
   }
 
+  Serial.println("Audio initialized successfully");
+}
+
+void setupSynthesizer()
+{
+
   // Initialize synthesizer
   if (!synthesizer.begin(info))
   {
     Serial.println("Error: Cannot initialize synthesizer");
     return;
   }
-  synthesizer.enableBowlMode(true);
-  synthesizer.createBowlPattern(64, 200, analogRead(A0) + millis() );
   
-  // Set volume to 50%
-  // Create StreamCopy AFTER initialization
+  synthesizer.enableBowlMode(true);
+  synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0) );
+
+
   copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
-  //synthesizer.configureBowl(0.2f, 0.0f, 0.0f, 0.0f);
 
-  Serial.println("Audio initialized successfully");
-}
-
-void setupSynthesizer()
-{
   Serial.println("Creating synthesizer pattern...");
-
-  // Use mux controller for random seed
-  uint16_t raw = muxController.get(0, 0);
-
-  // Create African-style pattern
-  // synthesizer.createJazzPattern(64, 120, raw);
-  synthesizer.createBowlPattern(64, 30, analogRead(A0) + muxController.get(0, 0));
 
   // Start playing immediately
   synthesizer.playSequencer();
