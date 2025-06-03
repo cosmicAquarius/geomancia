@@ -60,7 +60,7 @@ public:
     void setHarmonicLevels(float vco1 = 1.0f, float vco2 = 0.6f, float vco3 = 0.3f);
     void setBeating(float vco1_cents = 3.0f, float vco2_cents = 3.0f, float vco3_cents = -2.5f);
    // audio_tools::InputMixer<int16_t>* getAudioStream();
-    audio_tools::AudioEffectStream* getAudioStream();
+    audio_tools::AudioStream* getAudioStream();
 
     // Status
     bool isActive() const;

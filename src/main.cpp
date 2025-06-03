@@ -120,6 +120,7 @@ void setupSynthesizer()
   synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0) );
 
 
+
   copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
 
   Serial.println("Creating synthesizer pattern...");

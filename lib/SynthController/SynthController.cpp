@@ -6,22 +6,21 @@
 
 // Natural Minor Pentatonic Scale (Em pentatonic) - bass and mid range only
 const float SynthController::range[] = {
-  // Am natural minor scale - octave 1 (sub-bass)
-  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,
-  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,    // Duplicate for weight
-  N_A1, N_B1, N_C1, N_D1, N_E1, N_F1, N_G1,    // Triple for emphasis
-  
-  // Perfect 5th intervals (Am chord tones)
-  N_A1, N_E1,     // A-E (root-5th)
-  N_C1, N_G1,     // C-G (♭III-♭VII)
-  N_F1, N_C1,     // F-C (♭VI-♭III)
-  N_D1, N_A1,     // D-A (iv-root)
-  
-  // Chord tones emphasis (Am-Dm-F-G progression)
-  N_A1, N_C1, N_E1,    // Am chord
-  N_D1, N_F1, N_A1,    // Dm chord  
-  N_F1, N_A1, N_C1,    // F chord
-  N_G1, N_B1, N_D1     // G chord
+    // Gamme pentatonique minor (très électronique)
+    N_A2, N_C3, N_D3, N_E3, N_G3,
+    N_A3, N_C4, N_D4, N_E4, N_G4,
+    
+    // Accords de techno (Am - F - C - G)
+    N_A2, N_C3, N_E3,  // Am
+    N_F2, N_A3, N_C4,  // F
+    N_C3, N_E3, N_G3,  // C
+    N_G2, N_B3, N_D4,  // G
+    
+    // Basses percutantes
+    N_A1, N_A2, N_E2, N_F2, N_G2,
+    
+    // Leads aigus
+    N_A4, N_C5, N_E5, N_G5
 };
 
 const uint8_t SynthController::NUM_NOTES = sizeof(range) / sizeof(range[0]);
@@ -150,6 +149,99 @@ void SynthController::createAfricanPattern(uint8_t numSteps, uint16_t bpm, uint1
 
    Serial.printf("African pattern created: %d steps at %d BPM\n", numSteps, bpm);
 }
+// PATTERN ÉLECTRONIQUE
+void SynthController::createElectronicPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue) {
+    Serial.println("Creating Electronic pattern...");
+
+    if (seedValue == 0) {
+        seedValue = analogRead(A0) + millis();
+    }
+    Serial.printf("🎲 Random seed: %d\n", seedValue);
+
+    sequencer.setBPM(bpm);  // 120-140 BPM typique pour électronique
+    sequencer.setNumSteps(numSteps);
+    randomSeed(seedValue);
+
+    for (uint8_t i = 0; i < numSteps; i++) {
+        bool active = true;
+        
+        // PATTERNS RYTHMIQUES ÉLECTRONIQUES
+        if (i % 16 < 8) {
+            // Première moitié: pattern dense
+            active = (i % 2 == 0) || (random(100) < 70);
+        } else {
+            // Deuxième moitié: breakdown/build
+            active = (i % 4 == 0) || (random(100) < 40);
+        }
+        
+        if (active) {
+            float note;
+            uint8_t velocity;
+            uint8_t gate;
+            
+            // RÉPARTITION PAR FRÉQUENCE
+            uint8_t noteType = random(100);
+            
+            if (noteType < 40) {
+                // 40% BASSES (kicks/sub-bass)
+                note = range[random(0, 5)];  // Notes graves
+                velocity = random(80, 127);  // Fort
+                gate = random(20, 40);       // Court et percutant
+                
+            } else if (noteType < 70) {
+                // 30% ACCORDS/HARMONIES
+                note = range[random(5, 20)]; // Notes moyennes
+                velocity = random(40, 80);   // Moyen
+                gate = random(60, 90);       // Soutenu
+                
+            } else {
+                // 30% LEADS/MÉLODIES
+                note = range[random(20, NUM_NOTES)]; // Notes aigues
+                velocity = random(60, 100);  // Variable
+                gate = random(70, 100);      // Long pour mélodie
+            }
+            
+            sequencer.setStep(i, true, note, velocity, gate);
+            
+        } else {
+            sequencer.setStep(i, false, N_A2, 0, 0);
+        }
+    }
+
+    Serial.printf("Electronic pattern created: %d steps at %d BPM\n", numSteps, bpm);
+}
+
+void SynthController::createTechnoPattern(uint8_t numSteps, uint16_t bpm) {
+    // Pattern 4/4 classique techno
+    for (uint8_t i = 0; i < numSteps; i++) {
+        if (i % 4 == 0) {
+            // Kick sur chaque temps
+            sequencer.setStep(i, true, N_A1, 127, 30);
+        } else if (i % 8 == 6) {
+            // Snare sur le 2 et 4
+            sequencer.setStep(i, true, N_E3, 100, 20);
+        } else if (random(100) < 30) {
+            // Hi-hats aléatoires
+            sequencer.setStep(i, true, N_A4, random(40, 70), 10);
+        }
+    }
+}
+
+void SynthController::createAcidPattern(uint8_t numSteps, uint16_t bpm) {
+    // Pattern acid house TB-303 style
+    const float acid_notes[] = {N_A2, N_A2, N_E3, N_A3, N_C4, N_E4};
+    
+    for (uint8_t i = 0; i < numSteps; i++) {
+        if (i % 2 == 0 || random(100) < 60) {
+            float note = acid_notes[random(6)];
+            uint8_t velocity = random(60, 120);
+            uint8_t gate = random(10, 80);  // Variation slide/accent
+            
+            sequencer.setStep(i, true, note, velocity, gate);
+        }
+    }
+}
+
 
 void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue)
 {
@@ -278,7 +370,7 @@ void SynthController::pauseSequencer()
     Serial.println("Sequencer paused");
 }
 
-audio_tools::AudioEffectStream *SynthController::getAudioStream()
+audio_tools::AudioStream *SynthController::getAudioStream()
 {
     return tibetanBowl->getAudioStream(); // Toujours le bol
 }

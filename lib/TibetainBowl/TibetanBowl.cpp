@@ -7,11 +7,63 @@ TibetanBowl::TibetanBowl()
       vco1_level(1.0f),
       vco2_level(0.6f),
       vco3_level(0.3f),
-      vco1_detune(0.0f),  // Fundamental - no detune
+      vco1_detune(12.0f), // Fundamental - no detune
       vco2_detune(5.0f),  // 2nd harmonic - slight sharp for slow beats
       vco3_detune(-4.2f), // 3rd harmonic - slight flat for complex interference
       current_sample(0)
 {
+}
+
+void TibetanBowl::initializeComponents()
+
+{
+    // DÉTUNE ÉLECTRONIQUE - intervalles musicaux
+    vco1_detune = 0.0f;  // Fondamentale propre
+    vco2_detune = 12.0f; // Octave haute (lead)
+    vco3_detune = 7.0f;  // Quinte parfaite (harmonique)
+
+  // VCO1: Basse sub avec square wave pour punch
+    vco1 = new audio_tools::SquareWaveGenerator<int16_t>(5000);
+    // VCO2: Lead avec saw pour richesse harmonique
+    vco2 = new audio_tools::SawToothGenerator<int16_t>(5000);    
+    // VCO3: Texture avec triangle pour douceur
+    vco3 = new audio_tools::SawToothGenerator<int16_t>(5000);
+
+    // Create streams for each VCO
+    stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
+    stream2 = new audio_tools::GeneratedSoundStream<int16_t>(*vco2);
+    stream3 = new audio_tools::GeneratedSoundStream<int16_t>(*vco3);
+
+    vco1->begin(info);
+    vco2->begin(info); // 2nd harmonic
+    vco3->begin(info); // 3rd harmonic
+
+    // Initialize all components
+    stream1->begin(info);
+    stream2->begin(info);
+    stream3->begin(info);
+
+    mixer.add(*stream1, vco1_level * 100); // 33% level for VCO1
+    mixer.add(*stream2, vco2_level * 100); // 33% level for VCO2
+    mixer.add(*stream3, vco3_level * 100); // 33% level for VCO3
+    mixer.begin(info);
+
+    adsr = new audio_tools::ADSRGain(
+        0.001f, // Attack très rapide (1ms)
+        0.01f,  // Decay rapide (10ms)
+        0.8f,   // Sustain élevé (80%)
+        0.05f   // Release rapide (100ms)
+    );
+
+    // Create ADSR with bowl-like envelope
+    // Long attack, moderate decay, high sustain, very long release
+
+    effectStream = new audio_tools::AudioEffectStream(mixer);
+    effectStream->addEffect(adsr);
+    effectStream->begin(info);
+    Serial.printf("🔍 Effects in stream: %d\n", effectStream->size());
+    Serial.printf("🔍 EffectStream pointer: %p\n", effectStream);
+    Serial.printf("🔍 ADSR pointer: %p\n", adsr);
 }
 
 TibetanBowl::~TibetanBowl()
@@ -49,10 +101,6 @@ bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo)
         return false;
     }
 
-  
-
- 
-
     Serial.println("TibetanBowl initialized successfully");
     return true;
 }
@@ -75,7 +123,7 @@ void TibetanBowl::release()
 {
     if (adsr)
     {
-        adsr->keyOff();
+        //  adsr->keyOff();
     }
 }
 
@@ -102,50 +150,6 @@ void TibetanBowl::setBeating(float vco1_cents, float vco2_cents, float vco3_cent
 bool TibetanBowl::isActive() const
 {
     return adsr ? adsr->isActive() : false;
-}
-
-void TibetanBowl::initializeComponents()
-{
-    // Create three VCOs with moderate amplitude
-    vco1 = new audio_tools::SineWaveGenerator<int16_t>(5000);
-    vco2 = new audio_tools::SineWaveGenerator<int16_t>(5000);
-    vco3 = new audio_tools::SineWaveGenerator<int16_t>(5000);
-
-    // Create streams for each VCO
-    stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
-    stream2 = new audio_tools::GeneratedSoundStream<int16_t>(*vco2);
-    stream3 = new audio_tools::GeneratedSoundStream<int16_t>(*vco3);
-
-    vco1->begin(info);
-    vco2->begin(info); // 2nd harmonic
-    vco3->begin(info); // 3rd harmonic
-
-    // Initialize all components
-    stream1->begin(info);
-    stream2->begin(info);
-    stream3->begin(info);
-
-    mixer.add(*stream1, vco1_level * 100); // 33% level for VCO1
-    mixer.add(*stream2, vco2_level * 100); // 33% level for VCO2
-    mixer.add(*stream3, vco3_level * 100); // 33% level for VCO3
-    mixer.begin(info);
-
-    adsr = new audio_tools::ADSRGain(
-        0.001f, // Attack très rapide (1ms)
-        0.01f,  // Decay rapide (10ms)
-        0.8f,   // Sustain élevé (80%)
-        0.05f    // Release rapide (100ms)
-    );
-
-    // Create ADSR with bowl-like envelope
-    // Long attack, moderate decay, high sustain, very long release
-
-    effectStream = new audio_tools::AudioEffectStream(mixer);
-    effectStream->addEffect(adsr);
-    effectStream->begin(info);
-    Serial.printf("🔍 Effects in stream: %d\n", effectStream->size());
-    Serial.printf("🔍 EffectStream pointer: %p\n", effectStream);
-    Serial.printf("🔍 ADSR pointer: %p\n", adsr);
 }
 
 void TibetanBowl::setADSR(float attack, float decay, float sustain, float release)
@@ -188,8 +192,8 @@ float TibetanBowl::centsToRatio(float cents)
     return pow(2.0f, cents / 1200.0f);
 }
 
-audio_tools::AudioEffectStream *TibetanBowl::getAudioStream()
+audio_tools::AudioStream *TibetanBowl::getAudioStream()
 {
     Serial.printf("🎯 Returning effectStream: %p\n", effectStream);
-    return effectStream;
+    return &mixer;
 }
