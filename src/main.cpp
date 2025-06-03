@@ -44,7 +44,7 @@ enum PatternType
 
 PatternType currentPattern = PATTERN_BOWL;
 unsigned long lastPatternChange = 0;
-const unsigned long PATTERN_CHANGE_INTERVAL = 5000; // 20 secondes
+const unsigned long PATTERN_CHANGE_INTERVAL = 30000; // 20 secondes
 
 // Pattern names for debug
 const char *patternNames[] = {

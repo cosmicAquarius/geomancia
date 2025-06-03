@@ -17,7 +17,7 @@ const float Sequencer::note_frequencies[] = {
 const uint8_t Sequencer::NUM_NOTES = sizeof(note_frequencies) / sizeof(note_frequencies[0]);
 
 Sequencer::Sequencer()
-    : current_step(0), num_steps(16), bpm(200), last_step_time(0), gate_off_time(0), state(STOPPED), gate_active(false), audio_generator(nullptr), bowl_generator(nullptr), use_bowl_mode(true)
+    : current_step(0), num_steps(16), bpm(200), last_step_time(0), gate_off_time(0), state(STOPPED), gate_active(false), audio_generator(nullptr), instrument(nullptr), use_bowl_mode(true)
 {
     calculateStepDuration();
 
@@ -59,7 +59,7 @@ void Sequencer::setAudioGenerator(audio_tools::SineWaveGenerator<int16_t> *gener
 
 void Sequencer::setBowlGenerator(Instrument *bowl)
 {
-    bowl_generator = bowl;
+    instrument = bowl;
     Serial.println("Bowl generator connected to sequencer");
 }
 
@@ -230,11 +230,15 @@ void Sequencer::triggerStep()
     if (step.active)
     {
         float velocity_normalized = step.velocity / 127.0f;
-        bowl_generator->strike(step.frequency, velocity_normalized);
+        instrument->strike(step.frequency, velocity_normalized);
 
         gate_active = true;
         uint32_t gate_duration = (step_duration_ms * step.gate_length) / 100;
         gate_off_time = millis() + gate_duration;
+    } else {
+        // ✅ Step silencieux - forcer le release
+        instrument->release();
+        gate_active = false;
     }
 }
 
@@ -242,7 +246,7 @@ void Sequencer::stopGate()
 {
     gate_active = false;
   
-    bowl_generator->release();
+    instrument->release();
     
 }
 

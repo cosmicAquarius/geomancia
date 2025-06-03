@@ -25,15 +25,15 @@ const float SynthController::range[] = {
 const uint8_t SynthController::NUM_NOTES = sizeof(range) / sizeof(range[0]);
 
 SynthController::SynthController()
-    : sineWave(nullptr), sound(nullptr), tibetanBowl(nullptr),  info(44100, 2, 16)
+    : sineWave(nullptr), sound(nullptr), instrument(nullptr),  info(44100, 2, 16)
 {
 }
 
 SynthController::~SynthController()
 {
-    if (tibetanBowl)
+    if (instrument)
     {
-        delete tibetanBowl;
+        delete instrument;
     }
     if (sound)
     {
@@ -55,15 +55,15 @@ bool SynthController::begin(audio_tools::AudioInfo audioInfo)
     initializeAudioComponents();
 
     // Initialize Tibetan Bowl
-    tibetanBowl = new Instrument();
-    if (!tibetanBowl->begin(info))
+    instrument = new Instrument();
+    if (!instrument->begin(info))
     {
         Serial.println("Warning: Failed to initialize TibetanBowl");
     }
 
     // Connect both generators to sequencer
     sequencer.setAudioGenerator(sineWave); // CETTE LIGNE MANQUAIT !
-    sequencer.setBowlGenerator(tibetanBowl);
+    sequencer.setBowlGenerator(instrument);
 
     // Start in sine mode by default
     sequencer.setBowlMode(true);
@@ -283,7 +283,7 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
     for (uint8_t i = 0; i < numSteps; i++)
     {
         // African polyrhythm - complex rhythm patterns
-        bool active = (i % 3 != 2) || (random(100) < 40);
+        bool active = (i % 3 != 2) || (random(100) < 15);
 
         if (active)
         {
@@ -294,11 +294,11 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
             uint8_t gate;
             if (random(100) < 90)
             {
-                gate = random(60, 80); // Short/rapid notes
+                gate = random(45, 50); // Short/rapid notes
             }
             else
             {
-                gate = random(85, 100); // Long sustained notes
+                gate = random(15, 100); // Long sustained notes
             }
 
             sequencer.setStep(i, true, note, velocity, gate);
@@ -355,17 +355,17 @@ void SynthController::generateRandomPattern(uint8_t numSteps, uint16_t bpm, uint
 
 void SynthController::strikeBowl(float frequency, float velocity)
 {
-    if (tibetanBowl )
+    if (instrument )
     {
-        tibetanBowl->strike(frequency, velocity);
+        instrument->strike(frequency, velocity);
     }
 }
 
 void SynthController::configureBowl(float attack, float decay, float sustain, float release)
 {
-    if (tibetanBowl)
+    if (instrument)
     {
-        tibetanBowl->setADSR(attack, decay, sustain, release);
+        instrument->setADSR(attack, decay, sustain, release);
         Serial.printf("Bowl ADSR configured: A=%.2f D=%.2f S=%.2f R=%.2f\n",
                       attack, decay, sustain, release);
     }
@@ -389,10 +389,7 @@ void SynthController::pauseSequencer()
     Serial.println("Sequencer paused");
 }
 
-audio_tools::AudioStream *SynthController::getAudioStream()
-{
-    return tibetanBowl->getAudioStream(); // Toujours le bol
-}
+
 
 void SynthController::initializeAudioComponents()
 {
@@ -410,5 +407,10 @@ void SynthController::initializeAudioComponents()
 void SynthController::setupVCOs(const String &style)
 {
 
-    tibetanBowl->setupVCOs(style);
+    instrument->setupVCOs(style);
+}
+
+audio_tools::AudioStream *SynthController::getAudioStream()
+{
+    return instrument->getAudioStream(); // Toujours le bol
 }

@@ -17,7 +17,7 @@ private:
     Sequencer sequencer;
 
     // Tibetan Bowl
-    Instrument *tibetanBowl;
+    Instrument *instrument;
    
 
     // Audio configuration

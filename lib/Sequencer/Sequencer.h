@@ -39,7 +39,7 @@ private:
     
     // Audio generators
     audio_tools::SineWaveGenerator<int16_t>* audio_generator;
-    Instrument* bowl_generator;
+    Instrument* instrument;
     bool use_bowl_mode;
     
     // Note frequencies table
