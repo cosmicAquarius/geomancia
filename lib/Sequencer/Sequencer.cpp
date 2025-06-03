@@ -1,6 +1,6 @@
 #include <Sequencer.h>
 #include <AudioTools.h>
-#include <TibetanBowl.h>
+#include <Instrument.h>
 
 // Note frequencies table based on AudioTools defines
 const float Sequencer::note_frequencies[] = {
@@ -57,7 +57,7 @@ void Sequencer::setAudioGenerator(audio_tools::SineWaveGenerator<int16_t> *gener
     audio_generator = generator;
 }
 
-void Sequencer::setBowlGenerator(TibetanBowl *bowl)
+void Sequencer::setBowlGenerator(Instrument *bowl)
 {
     bowl_generator = bowl;
     Serial.println("Bowl generator connected to sequencer");

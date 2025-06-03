@@ -1,6 +1,6 @@
-#include <TibetanBowl.h>
+#include <Instrument.h>
 
-TibetanBowl::TibetanBowl()
+Instrument::Instrument()
     : vco1(nullptr), vco2(nullptr), vco3(nullptr),
       stream1(nullptr), stream2(nullptr), stream3(nullptr), 
       mixer(nullptr), adsr(nullptr), effectStream(nullptr),
@@ -15,7 +15,7 @@ TibetanBowl::TibetanBowl()
 {
 }
 
-void TibetanBowl::initializeComponents()
+void Instrument::initializeComponents()
 {
     // DÉTUNE ÉLECTRONIQUE - intervalles musicaux
     vco1_detune = 0.0f;  // Fondamentale propre
@@ -69,7 +69,7 @@ void TibetanBowl::initializeComponents()
     Serial.printf("🔍 Mixer pointer: %p\n", mixer);
 }
 
-TibetanBowl::~TibetanBowl()
+Instrument::~Instrument()
 {
     if (effectStream) {
         effectStream->end();
@@ -101,7 +101,7 @@ TibetanBowl::~TibetanBowl()
         delete vco1;
 }
 
-bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo)
+bool Instrument::begin(audio_tools::AudioInfo audioInfo)
 {
     info = audioInfo;
 
@@ -119,7 +119,7 @@ bool TibetanBowl::begin(audio_tools::AudioInfo audioInfo)
     return true;
 }
 
-void TibetanBowl::strike(float frequency, float velocity)
+void Instrument::strike(float frequency, float velocity)
 {
     fundamental_freq = frequency;
 
@@ -133,7 +133,7 @@ void TibetanBowl::strike(float frequency, float velocity)
     }
 }
 
-void TibetanBowl::release()
+void Instrument::release()
 {
     if (adsr)
     {
@@ -141,14 +141,14 @@ void TibetanBowl::release()
     }
 }
 
-void TibetanBowl::setHarmonicLevels(float vco1, float vco2, float vco3)
+void Instrument::setHarmonicLevels(float vco1, float vco2, float vco3)
 {
     vco1_level = vco1;
     vco2_level = vco2;
     vco3_level = vco3;
 }
 
-void TibetanBowl::setBeating(float vco1_cents, float vco2_cents, float vco3_cents)
+void Instrument::setBeating(float vco1_cents, float vco2_cents, float vco3_cents)
 {
     vco1_detune = vco1_cents; // Fundamental - no detune
     vco2_detune = vco2_cents;
@@ -161,12 +161,12 @@ void TibetanBowl::setBeating(float vco1_cents, float vco2_cents, float vco3_cent
     }
 }
 
-bool TibetanBowl::isActive() const
+bool Instrument::isActive() const
 {
     return adsr ? adsr->isActive() : false;
 }
 
-void TibetanBowl::setADSR(float attack, float decay, float sustain, float release)
+void Instrument::setADSR(float attack, float decay, float sustain, float release)
 {
     if (adsr)
     {
@@ -177,7 +177,7 @@ void TibetanBowl::setADSR(float attack, float decay, float sustain, float releas
     }
 }
 
-void TibetanBowl::updateFrequencies()
+void Instrument::updateFrequencies()
 {
     if (!vco1 || !vco2 || !vco3)
         return;
@@ -199,20 +199,20 @@ void TibetanBowl::updateFrequencies()
    // Serial.printf("🎶 Frequencies: %.2f Hz\n", fundamental_freq);
 }
 
-float TibetanBowl::centsToRatio(float cents)
+float Instrument::centsToRatio(float cents)
 {
     // Convert cents to frequency ratio
     // 100 cents = 1 semitone = ratio of 2^(1/12)
     return pow(2.0f, cents / 1200.0f);
 }
 
-audio_tools::AudioStream *TibetanBowl::getAudioStream()
+audio_tools::AudioStream *Instrument::getAudioStream()
 {
     Serial.printf("🎯 Returning mixer: %p\n", mixer);
     return mixer;
 }
 
-void TibetanBowl::setupVCOs(const String& style)
+void Instrument::setupVCOs(const String& style)
 {
     Serial.printf("🎛️ Setting up VCOs for style: %s\n", style.c_str());
     
@@ -340,7 +340,7 @@ void TibetanBowl::setupVCOs(const String& style)
 }
 
 // Méthode utilitaire pour changer de style à la volée
-void TibetanBowl::morphToStyle(const String& targetStyle, float morphTime) {
+void Instrument::morphToStyle(const String& targetStyle, float morphTime) {
     // TODO: Implémentation future pour transition graduelle entre styles
     Serial.printf("🌀 Morphing to %s (instant for now)\n", targetStyle.c_str());
     setupVCOs(targetStyle);

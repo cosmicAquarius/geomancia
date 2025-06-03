@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <AudioTools.h>
 
-class TibetanBowl
+class Instrument
 {
 private:
     // Three VCOs for harmonic content
@@ -40,8 +40,8 @@ private:
     int16_t current_sample;
 
 public:
-    TibetanBowl();
-    ~TibetanBowl();
+    Instrument();
+    ~Instrument();
 
     // Initialization
     bool begin(audio_tools::AudioInfo audioInfo);

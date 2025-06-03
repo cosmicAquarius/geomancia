@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "AudioTools.h"
 #include <Sequencer.h>
-#include <TibetanBowl.h>
+#include <Instrument.h>
 
 class SynthController
 {
@@ -17,7 +17,7 @@ private:
     Sequencer sequencer;
 
     // Tibetan Bowl
-    TibetanBowl *tibetanBowl;
+    Instrument *tibetanBowl;
    
 
     // Audio configuration
@@ -52,7 +52,7 @@ public:
     void pauseSequencer();
 
     void setBPM(uint16_t bpm);
-    
+
     void strikeBowl(float frequency, float velocity = 1.0f);
     void configureBowl(float attack = 0.1f, float decay = 0.2f, float sustain = 0.7f, float release = 8.0f);
     audio_tools::AudioStream *getAudioStream();

@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <AudioTools.h>
 #include <Sequencer.h>
-#include <TibetanBowl.h>
+#include <Instrument.h>
 
 // Natural Minor Pentatonic Scale (Em pentatonic) - bass and mid range only
 const float SynthController::range[] = {
@@ -55,7 +55,7 @@ bool SynthController::begin(audio_tools::AudioInfo audioInfo)
     initializeAudioComponents();
 
     // Initialize Tibetan Bowl
-    tibetanBowl = new TibetanBowl();
+    tibetanBowl = new Instrument();
     if (!tibetanBowl->begin(info))
     {
         Serial.println("Warning: Failed to initialize TibetanBowl");

@@ -5,7 +5,7 @@
 #include "AudioTools.h"
 
 // Forward declaration for TibetanBowl
-class TibetanBowl;
+class Instrument;
 
 class Sequencer {
 public:
@@ -39,7 +39,7 @@ private:
     
     // Audio generators
     audio_tools::SineWaveGenerator<int16_t>* audio_generator;
-    TibetanBowl* bowl_generator;
+    Instrument* bowl_generator;
     bool use_bowl_mode;
     
     // Note frequencies table
@@ -53,7 +53,7 @@ public:
     void setBPM(uint16_t bpm);
     void setNumSteps(uint8_t steps);
     void setAudioGenerator(audio_tools::SineWaveGenerator<int16_t>* generator);
-    void setBowlGenerator(TibetanBowl* bowl);
+    void setBowlGenerator(Instrument* bowl);
     void setBowlMode(bool enable);
     
     // Playback control
