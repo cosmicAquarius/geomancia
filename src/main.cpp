@@ -32,6 +32,27 @@ TaskHandle_t muxTaskHandle = NULL;
 
 volatile bool audioRunning = false;
 
+// PATTERN SWITCHING VARIABLES
+enum PatternType
+{
+  PATTERN_BOWL = 0,
+  PATTERN_ELECTRONIC,
+  PATTERN_TECHNO,
+  PATTERN_ACID,
+  PATTERN_COUNT
+};
+
+PatternType currentPattern = PATTERN_BOWL;
+unsigned long lastPatternChange = 0;
+const unsigned long PATTERN_CHANGE_INTERVAL = 5000; // 20 secondes
+
+// Pattern names for debug
+const char *patternNames[] = {
+    "Tibetan Bowl",
+    "Electronic",
+    "Techno",
+    "Acid House"};
+
 /**
  * AUDIO TASK - High priority
  */
@@ -92,6 +113,59 @@ void muxTask(void *parameter)
   }
 }
 
+/**
+ * SWITCH TO NEXT PATTERN
+ */
+void switchToNextPattern()
+{
+  // Stop current pattern
+  synthesizer.stopSequencer();
+
+  // Move to next pattern
+  currentPattern = (PatternType)((currentPattern + 1) % PATTERN_COUNT);
+
+  // Generate random seed
+  uint16_t seed = analogRead(A0) + millis() + muxController.get(0, 0);
+
+  Serial.printf("🎵 Switching to pattern: %s (seed: %d)\n",
+                patternNames[currentPattern], seed);
+
+               
+           
+  // Create new pattern based on type
+  switch (currentPattern)
+  {
+  case PATTERN_BOWL:
+
+   synthesizer.setupVCOs("tibetan");
+    synthesizer.createBowlPattern(64, 32, seed);
+    break;
+
+  case PATTERN_ELECTRONIC:
+
+    synthesizer.setupVCOs("acid");
+    synthesizer.createElectronicPattern(32, 120, seed);
+    break;
+
+  case PATTERN_TECHNO:
+  
+    synthesizer.setupVCOs("acid");
+    synthesizer.createTechnoPattern(16, 130);
+    break;
+
+  case PATTERN_ACID:
+  
+    synthesizer.setupVCOs("ambient");
+    synthesizer.createAcidPattern(32, 140);
+    break;
+  }
+
+  // Start playing new pattern
+  synthesizer.playSequencer();
+
+  Serial.printf("✓ Pattern '%s' started\n", patternNames[currentPattern]);
+}
+
 void setupAudio()
 {
   Serial.println("Audio initialization...");
@@ -108,25 +182,26 @@ void setupAudio()
 
 void setupSynthesizer()
 {
-
   // Initialize synthesizer
   if (!synthesizer.begin(info))
   {
     Serial.println("Error: Cannot initialize synthesizer");
     return;
   }
-  
-  synthesizer.enableBowlMode(true);
-  synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0) );
 
-
+  // Start with Bowl pattern
+ 
+  synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0));
 
   copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
 
-  Serial.println("Creating synthesizer pattern...");
+  Serial.println("Creating initial synthesizer pattern...");
 
   // Start playing immediately
   synthesizer.playSequencer();
+
+  // Initialize pattern switching timer
+  lastPatternChange = millis();
 }
 
 void setupTasks()
@@ -176,7 +251,7 @@ void setup()
 
   // wait for serial to stabilize
   delay(1000);
-  Serial.println("\n=== ESP32 Audio Synthesizer with Pattern Generator ===\n");
+  Serial.println("\n=== ESP32 Audio Synthesizer with Auto Pattern Switching ===\n");
 
   // Setup ADC
   analogSetWidth(12);
@@ -191,7 +266,7 @@ void setup()
   // create tasks
   setupTasks();
 
-  Serial.println("Setup completed. African pattern playing automatically.\n");
+  Serial.println("Setup completed. Auto pattern switching every 20s.\n");
 }
 
 // Memory formatting utility function
@@ -211,11 +286,19 @@ String formatMemory(uint32_t bytes)
   }
 }
 
-// Main loop
+// Main loop with pattern switching
 void loop()
 {
   static unsigned long lastMonitor = 0;
 
+  // CHECK PATTERN SWITCHING (every 20 seconds)
+  if (millis() - lastPatternChange > PATTERN_CHANGE_INTERVAL)
+  {
+    switchToNextPattern();
+    lastPatternChange = millis();
+  }
+
+  // SYSTEM MONITORING (every 5 seconds)
   if (millis() - lastMonitor > 5000)
   {
     lastMonitor = millis();
@@ -244,12 +327,17 @@ void loop()
                     eTaskGetState(muxTaskHandle) == eRunning ? "Running" : "Stopped");
     }
 
-    // Synthesizer status
-    Serial.printf("🎼 Synthesizer: Step %d/%d | BPM %d | %s\n",
+    // Synthesizer status with current pattern
+    Serial.printf("🎼 Pattern: %s | Step %d/%d | BPM %d | %s\n",
+                  patternNames[currentPattern],
                   synthesizer.getCurrentStep() + 1,
                   synthesizer.getNumSteps(),
                   synthesizer.getBPM(),
                   synthesizer.isPlaying() ? "Playing" : "Stopped");
+
+    // Time until next pattern change
+    unsigned long timeUntilChange = PATTERN_CHANGE_INTERVAL - (millis() - lastPatternChange);
+    Serial.printf("⏰ Next pattern in: %lu seconds\n", timeUntilChange / 1000);
 
     Serial.println();
   }

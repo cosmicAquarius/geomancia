@@ -18,7 +18,7 @@ private:
 
     // Tibetan Bowl
     TibetanBowl *tibetanBowl;
-    bool useBowlMode;
+   
 
     // Audio configuration
     audio_tools::AudioInfo info;
@@ -51,8 +51,7 @@ public:
     void stopSequencer();
     void pauseSequencer();
 
-    // Bowl control
-    void enableBowlMode(bool enable = true);
+   
     void strikeBowl(float frequency, float velocity = 1.0f);
     void configureBowl(float attack = 0.1f, float decay = 0.2f, float sustain = 0.7f, float release = 8.0f);
     audio_tools::AudioStream *getAudioStream();
@@ -61,7 +60,10 @@ public:
     uint8_t getNumSteps() const { return sequencer.getNumSteps(); }
     uint16_t getBPM() const { return sequencer.getBPM(); }
     bool isPlaying() const { return sequencer.getState() == Sequencer::PLAYING; }
-    bool isBowlMode() const { return useBowlMode; }
+
+
+    // Dans SynthController.h - Ajouter dans la section public:
+    void setupVCOs(const String &style);
 
 private:
     void initializeAudioComponents();

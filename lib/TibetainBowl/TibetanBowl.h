@@ -34,7 +34,7 @@ private:
     float vco1_detune;
     float vco2_detune; // Cents detuning for beating effect
     float vco3_detune;
-    InputMixer<int16_t> mixer;
+    InputMixer<int16_t> *mixer;
 
     // Current mixed sample
     int16_t current_sample;
@@ -64,6 +64,8 @@ public:
 
     // Status
     bool isActive() const;
+    void setupVCOs(const String& style);
+    void morphToStyle(const String& targetStyle, float morphTime = 1.0f);
 
 private:
     void initializeComponents();
