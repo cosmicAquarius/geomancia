@@ -33,7 +33,7 @@ Sequencer::Sequencer()
 
 void Sequencer::setBPM(uint16_t new_bpm)
 {
-    if (new_bpm >= 15 && new_bpm <= 200)
+    if (new_bpm >= 16 && new_bpm <= 200)
     {
         bpm = new_bpm;
         calculateStepDuration();

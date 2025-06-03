@@ -130,33 +130,35 @@ void switchToNextPattern()
   Serial.printf("🎵 Switching to pattern: %s (seed: %d)\n",
                 patternNames[currentPattern], seed);
 
-               
-           
+  uint16_t rawValue = muxController.get(0, 0);
+  uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
+  bpm = constrain(bpm, 16, 200); // Sécurise les bornes
+
   // Create new pattern based on type
   switch (currentPattern)
   {
   case PATTERN_BOWL:
 
-   synthesizer.setupVCOs("tibetan");
-    synthesizer.createBowlPattern(64, 32, seed);
+    synthesizer.setupVCOs("tibetan");
+    synthesizer.createBowlPattern(64, bpm, seed);
     break;
 
   case PATTERN_ELECTRONIC:
 
     synthesizer.setupVCOs("acid");
-    synthesizer.createElectronicPattern(32, 120, seed);
+    synthesizer.createElectronicPattern(64, bpm, seed);
     break;
 
   case PATTERN_TECHNO:
-  
+
     synthesizer.setupVCOs("acid");
-    synthesizer.createTechnoPattern(16, 130);
+    synthesizer.createTechnoPattern(64, bpm);
     break;
 
   case PATTERN_ACID:
-  
+
     synthesizer.setupVCOs("ambient");
-    synthesizer.createAcidPattern(32, 140);
+    synthesizer.createAcidPattern(64, bpm);
     break;
   }
 
@@ -190,7 +192,7 @@ void setupSynthesizer()
   }
 
   // Start with Bowl pattern
- 
+
   synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0));
 
   copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
@@ -296,6 +298,13 @@ void loop()
   {
     switchToNextPattern();
     lastPatternChange = millis();
+  }
+  if (millis() - lastPatternChange > 200)
+  {
+    uint16_t rawValue = muxController.get(0, 0);
+    uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
+    bpm = constrain(bpm, 16, 200); // Sécurise les bornes
+    synthesizer.setBPM(bpm);
   }
 
   // SYSTEM MONITORING (every 5 seconds)

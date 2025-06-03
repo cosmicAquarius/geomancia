@@ -261,6 +261,7 @@ void SynthController::createAcidPattern(uint8_t numSteps, uint16_t bpm)
     }
 }
 
+
 void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue)
 {
     Serial.println("Creating Tibetan Bowl pattern...");
@@ -309,6 +310,11 @@ void SynthController::createBowlPattern(uint8_t numSteps, uint16_t bpm, uint16_t
     }
 
     Serial.printf("Bowl pattern created: %d steps at %d BPM\n", numSteps, bpm);
+}
+
+void SynthController::setBPM(uint16_t bpm)
+{
+    sequencer.setBPM(bpm);
 }
 
 void SynthController::generateRandomPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue)
