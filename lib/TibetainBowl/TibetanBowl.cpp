@@ -107,9 +107,9 @@ bool TibetanBowl::isActive() const
 void TibetanBowl::initializeComponents()
 {
     // Create three VCOs with moderate amplitude
-    vco1 = new audio_tools::SineWaveGenerator<int16_t>(10000);
-    vco2 = new audio_tools::SineWaveGenerator<int16_t>(10000);
-    vco3 = new audio_tools::SineWaveGenerator<int16_t>(10000);
+    vco1 = new audio_tools::SineWaveGenerator<int16_t>(5000);
+    vco2 = new audio_tools::SineWaveGenerator<int16_t>(5000);
+    vco3 = new audio_tools::SineWaveGenerator<int16_t>(5000);
 
     // Create streams for each VCO
     stream1 = new audio_tools::GeneratedSoundStream<int16_t>(*vco1);
@@ -131,10 +131,10 @@ void TibetanBowl::initializeComponents()
     mixer.begin(info);
 
     adsr = new audio_tools::ADSRGain(
-        0.02f, // Attack rapide (10ms)
-        0.3f,  // Decay assez long (300ms)
-        0.4f,  // Sustain à 40%
-        2.0f   // Release très long (2 secondes)
+        0.001f, // Attack très rapide (1ms)
+        0.01f,  // Decay rapide (10ms)
+        0.8f,   // Sustain élevé (80%)
+        0.05f    // Release rapide (100ms)
     );
 
     // Create ADSR with bowl-like envelope
