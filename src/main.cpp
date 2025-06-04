@@ -140,7 +140,7 @@ void switchToNextPattern()
   case PATTERN_BOWL:
 
     synthesizer.setupVCOs("tibetan");
-    synthesizer.createBowlPattern(64, bpm, seed);
+    synthesizer.createBowlPattern(64, bpm/2, seed);
     break;
 
   case PATTERN_ELECTRONIC:

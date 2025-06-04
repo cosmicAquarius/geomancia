@@ -22,11 +22,9 @@ void Instrument::initializeComponents()
     vco2_detune = 12.0f; // Octave haute (lead)
     vco3_detune = 7.0f;  // Quinte parfaite (harmonique)
 
-    // VCO1: Basse sub avec square wave pour punch
+
     vco1 = new audio_tools::SquareWaveGenerator<int16_t>(5000);
-    // VCO2: Lead avec saw pour richesse harmonique
-    vco2 = new audio_tools::SawToothGenerator<int16_t>(5000);
-    // VCO3: Texture avec triangle pour douceur
+    vco2 = new audio_tools::SineWaveGenerator<int16_t>(5000);
     vco3 = new audio_tools::SawToothGenerator<int16_t>(5000);
 
     // Create streams for each VCO
@@ -50,12 +48,7 @@ void Instrument::initializeComponents()
     mixer->add(*stream3, vco3_level * 100); // level for VCO3
     mixer->begin(info);
 
-    adsr = new audio_tools::ADSRGain(
-        0.001f, // Attack très rapide (1ms)
-        0.01f,  // Decay rapide (10ms)
-        0.8f,   // Sustain élevé (80%)
-        0.05f   // Release rapide (100ms)
-    );
+    adsr = new audio_tools::ADSRGain(0.0001, 1.0000, 0.9, 0.00001, 1.0);
 
     // Create ADSR with bowl-like envelope
     // Long attack, moderate decay, high sustain, very long release
@@ -231,16 +224,20 @@ void Instrument::setupVCOs(const String &style)
 
         if (adsr)
         {
+    //pour mémoire voici ce qu'on doit obtenir avec le tibetan 
+            //ADSRGain adsr(0.0001, 1.0000, 0.9, 0.00001, 1.0);
+            //const unsigned long NOTE_INTERVAL = 5000; 
+            //donc tempo très lent
+            //durée de note 500-100
+            //SquareWaveGenerator<int16_t> vco1(1000);    // Basse
+            //SineWaveGenerator<int16_t> vco2(6000);      // Lead  
+            //SineWaveGenerator<int16_t> vco3(4000);      // Harmonique
+            adsr->setAttackRate(0.0001f);    // ✅ 
+            adsr->setDecayRate(1.0000f);     // ✅
+            adsr->setSustainLevel(0.9f);     // ✅ 
+            adsr->setReleaseRate(0.00001f);  // ✅
 
-            adsr->setAttackRate(1.0f);
-            adsr->setDecayRate(1.0f);
-            adsr->setSustainLevel(1.0f);
-            adsr->setReleaseRate(1.0f);
-
-            //  adsr->setAttackRate(0.005f);
-            // adsr->setDecayRate(0.005f);
-            // adsr->setSustainLevel(0.005f);
-            // adsr->setReleaseRate(0.005f);
+    
         }
 
         Serial.println("✅ TIBETAN setup complete - Traditional bowl resonance!");
@@ -263,10 +260,10 @@ void Instrument::setupVCOs(const String &style)
         // === CONFIGURATION ADSR ACID ===
         if (adsr)
         {
-            adsr->setAttackRate(0.002f); // Attaque très rapide (2ms) - punch acid
-            adsr->setDecayRate(0.08f);   // Decay modéré (80ms) - caractère acid
-            adsr->setSustainLevel(0.6f); // Sustain à 60% - maintien du groove
-            adsr->setReleaseRate(0.15f); // Release plus long (150ms) - queue ambient
+            adsr->setAttackRate(0.01f);     // Attack rapide (punch acid)
+            adsr->setDecayRate(1.0f);       // Decay rapide (caractère acid squelchy)
+            adsr->setSustainLevel(0.6f);    // Sustain à 60% - maintien du groove
+            adsr->setReleaseRate(0.005f);   // Release rapide (staccato acid)
         }
 
         Serial.println("✅ ACID setup complete - Ready for squelchy basslines!");
@@ -286,10 +283,10 @@ void Instrument::setupVCOs(const String &style)
 
         if (adsr)
         {
-            adsr->setAttackRate(1.0f);    // Ultra-lent
-            adsr->setDecayRate(0.08f);    // Très doux
-            adsr->setSustainLevel(0.85f); // Sustain élevé
-            adsr->setReleaseRate(0.01f);  // Release infini
+            adsr->setAttackRate(0.00005f);  // Attack ultra-lent (montée douce)
+            adsr->setDecayRate(0.8f);       // Decay lent (transition douce)
+            adsr->setSustainLevel(0.85f);   // Sustain élevé (85%)
+            adsr->setReleaseRate(0.000005f); // Release infini (pad qui traîne)
         }
 
         Serial.println("✅ AMBIENT setup complete - Ethereal soundscapes ready!");
