@@ -151,6 +151,7 @@ Sequencer::Step Sequencer::getStep(uint8_t step_index) const
 
 void Sequencer::update()
 {
+    instrument->update(); // Ensure instrument is updated
     if (state != PLAYING)
     {
         return;

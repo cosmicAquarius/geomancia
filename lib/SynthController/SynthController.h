@@ -41,10 +41,11 @@ public:
     void createJazzPattern(uint8_t numSteps = 64, uint16_t bpm = 120, uint16_t seedValue = 0);
     void createAfricanPattern(uint8_t numSteps = 64, uint16_t bpm = 140, uint16_t seedValue = 0);
     void createBowlPattern(uint8_t numSteps = 16, uint16_t bpm = 45, uint16_t seedValue = 0);
+    void createDrumkitPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue);
     // Pattern Creation Methods
     void createElectronicPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue = 0);
-    void createTechnoPattern(uint8_t numSteps, uint16_t bpm);
-    void createAcidPattern(uint8_t numSteps, uint16_t bpm);
+    void createTechnoPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue = 0);
+    void createAmbiantPattern(uint8_t numSteps, uint16_t bpm, uint16_t seedValue = 0);
     void generateRandomPattern(uint8_t numSteps = 64, uint16_t bpm = 80, uint16_t seedValue = 0);
 
     void playSequencer();

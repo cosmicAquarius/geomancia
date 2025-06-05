@@ -35,65 +35,67 @@ volatile bool audioRunning = false;
 // PATTERN SWITCHING VARIABLES
 enum PatternType
 {
-  PATTERN_BOWL = 0,
-  PATTERN_ELECTRONIC,
-  PATTERN_TECHNO,
-  PATTERN_ACID,
-  PATTERN_COUNT
+    PATTERN_TIBETAN = 0,
+    PATTERN_ACID,
+    PATTERN_TECHNO,
+    PATTERN_AMBIENT,
+    PATTERN_DRUMKIT,
+    PATTERN_COUNT
 };
 
-PatternType currentPattern = PATTERN_BOWL;
+PatternType currentPattern = PATTERN_TIBETAN;
 unsigned long lastPatternChange = 0;
 const unsigned long PATTERN_CHANGE_INTERVAL = 30000; // 20 secondes
 
 // Pattern names for debug
 const char *patternNames[] = {
     "Tibetan Bowl",
-    "Electronic",
+    "Acid House",
     "Techno",
-    "Acid House"};
+    "Ambient",
+    "Drumkit"};
 
 /**
  * AUDIO TASK - High priority
  */
 void audioTask(void *parameter)
 {
-  Serial.println("Audio Task started on Core " + String(xPortGetCoreID()));
+    Serial.println("Audio Task started on Core " + String(xPortGetCoreID()));
 
-  if (!copier)
-  {
-    Serial.println("Error: copier not initialized");
+    if (!copier)
+    {
+        Serial.println("Error: copier not initialized");
+        vTaskDelete(NULL);
+        return;
+    }
+
+    audioRunning = true;
+
+    while (audioRunning)
+    {
+        // Update synthesizer (includes sequencer)
+        synthesizer.update();
+
+        // Continuous audio stream copy
+        copier->copy();
+
+        // Small yield to avoid monopolizing CPU
+        // 1ms
+        vTaskDelay(1);
+    }
+
+    Serial.println("Audio Task terminated");
     vTaskDelete(NULL);
-    return;
-  }
-
-  audioRunning = true;
-
-  while (audioRunning)
-  {
-    // Update synthesizer (includes sequencer)
-    synthesizer.update();
-
-    // Continuous audio stream copy
-    copier->copy();
-
-    // Small yield to avoid monopolizing CPU
-    // 1ms
-    vTaskDelay(1);
-  }
-
-  Serial.println("Audio Task terminated");
-  vTaskDelete(NULL);
 }
 
 void plotValues(uint8_t id, uint16_t value)
 {
-  Serial.print('>');
-  Serial.print(id);
-  Serial.print(':');
-  Serial.print(value);
-  Serial.println();
-  Serial.flush();
+    Serial.print('>');
+    Serial.print(id);
+    Serial.print(':');
+    Serial.print(value);
+    Serial.println();
+    Serial.flush();
 }
 
 /**
@@ -101,16 +103,16 @@ void plotValues(uint8_t id, uint16_t value)
  */
 void muxTask(void *parameter)
 {
-  Serial.println("Multiplexer Task started on Core " + String(xPortGetCoreID()));
+    Serial.println("Multiplexer Task started on Core " + String(xPortGetCoreID()));
 
-  while (true)
-  {
-    // Single readNext() every 5ms
-    muxController.readNext();
+    while (true)
+    {
+        // Single readNext() every 5ms
+        muxController.readNext();
 
-    // 5ms pause before next readNext()
-    vTaskDelay(pdMS_TO_TICKS(5));
-  }
+        // 5ms pause before next readNext()
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
 }
 
 /**
@@ -118,245 +120,250 @@ void muxTask(void *parameter)
  */
 void switchToNextPattern()
 {
-  // Stop current pattern
-  synthesizer.stopSequencer();
+    // Stop current pattern
+    synthesizer.stopSequencer();
 
-  // Move to next pattern
-  currentPattern = (PatternType)((currentPattern + 1) % PATTERN_COUNT);
+    // Move to next pattern
+    currentPattern = (PatternType)((currentPattern + 1) % PATTERN_COUNT);
 
-  // Generate random seed
-  uint16_t seed = analogRead(A0) + millis() + muxController.get(0, 0);
+    // Generate random seed
+    uint16_t seed = analogRead(A0) + millis() + muxController.get(0, 0);
 
-  Serial.printf("🎵 Switching to pattern: %s (seed: %d)\n",
-                patternNames[currentPattern], seed);
+    Serial.printf("🎵 Switching to pattern: %s (seed: %d)\n",
+                  patternNames[currentPattern], seed);
 
-  uint16_t rawValue = muxController.get(0, 0);
-  uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
-  bpm = constrain(bpm, 16, 200); // Sécurise les bornes
+    uint16_t rawValue = muxController.get(0, 0);
+    uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
+    bpm = constrain(bpm, 16, 200); // Sécurise les bornes
 
-  // Create new pattern based on type
-  switch (currentPattern)
-  {
-  case PATTERN_BOWL:
+    // Create new pattern based on type
+    switch (currentPattern)
+    {
+    case PATTERN_TIBETAN:
 
-    synthesizer.setupVCOs("tibetan");
-    synthesizer.createBowlPattern(64, bpm/2, seed);
-    break;
+        synthesizer.setupVCOs("tibetan");
+        synthesizer.createBowlPattern(64, bpm, seed);
+        break;
 
-  case PATTERN_ELECTRONIC:
+    case PATTERN_ACID:
 
-    synthesizer.setupVCOs("acid");
-    synthesizer.createElectronicPattern(64, bpm, seed);
-    break;
+        synthesizer.setupVCOs("acid");
+        synthesizer.createElectronicPattern(64, bpm, seed);
+        break;
 
-  case PATTERN_TECHNO:
+    case PATTERN_TECHNO:
 
-    synthesizer.setupVCOs("acid");
-    synthesizer.createTechnoPattern(64, bpm);
-    break;
+        synthesizer.setupVCOs("techno");
+        synthesizer.createTechnoPattern(64, bpm, seed );
+        break;
 
-  case PATTERN_ACID:
+    case PATTERN_AMBIENT:
 
-    synthesizer.setupVCOs("ambient");
-    synthesizer.createAcidPattern(64, bpm);
-    break;
-  }
+        synthesizer.setupVCOs("ambient");
+        synthesizer.createAmbiantPattern(64, bpm ), seed;
+        break;
+    case PATTERN_DRUMKIT:
+        //  skip drumkit pattern
+        synthesizer.setupVCOs("tibetan");
+        synthesizer.createBowlPattern(64, bpm, seed);
+        break;
+    }
 
-  // Start playing new pattern
-  synthesizer.playSequencer();
+    // Start playing new pattern
+    synthesizer.playSequencer();
 
-  Serial.printf("✓ Pattern '%s' started\n", patternNames[currentPattern]);
+    Serial.printf("✓ Pattern '%s' started\n", patternNames[currentPattern]);
 }
 
 void setupAudio()
 {
-  Serial.println("Audio initialization...");
+    Serial.println("Audio initialization...");
 
-  // Initialize driver UDA1334A
-  if (!driverUDA1334A.begin(info))
-  {
-    Serial.println("Error: Cannot initialize UDA1334A");
-    return;
-  }
+    // Initialize driver UDA1334A
+    if (!driverUDA1334A.begin(info))
+    {
+        Serial.println("Error: Cannot initialize UDA1334A");
+        return;
+    }
 
-  Serial.println("Audio initialized successfully");
+    Serial.println("Audio initialized successfully");
 }
 
 void setupSynthesizer()
 {
-  // Initialize synthesizer
-  if (!synthesizer.begin(info))
-  {
-    Serial.println("Error: Cannot initialize synthesizer");
-    return;
-  }
+    // Initialize synthesizer
+    if (!synthesizer.begin(info))
+    {
+        Serial.println("Error: Cannot initialize synthesizer");
+        return;
+    }
 
-  // Start with Bowl pattern
+    // Start with Bowl pattern
 
-  synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0));
+    synthesizer.createBowlPattern(64, 30, analogRead(A0) + millis() + muxController.get(0, 0));
 
-  copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
+    copier = new StreamCopy(driverUDA1334A.getStream(), *synthesizer.getAudioStream());
 
-  Serial.println("Creating initial synthesizer pattern...");
+    Serial.println("Creating initial synthesizer pattern...");
 
-  // Start playing immediately
-  synthesizer.playSequencer();
+    // Start playing immediately
+    synthesizer.playSequencer();
 
-  // Initialize pattern switching timer
-  lastPatternChange = millis();
+    // Initialize pattern switching timer
+    lastPatternChange = millis();
 }
 
 void setupTasks()
 {
-  Serial.println("Creating FreeRTOS tasks...");
+    Serial.println("Creating FreeRTOS tasks...");
 
-  // Audio Task - High priority, Core 1 (dedicated)
-  xTaskCreatePinnedToCore(
-      audioTask,        // Function
-      "AudioTask",      // Name
-      4096,             // Stack size
-      NULL,             // Parameters
-      3,                // High priority (0-5, 5=max)
-      &audioTaskHandle, // Handle
-      1                 // Core 1 (Core 0 = WiFi/Bluetooth)
-  );
+    // Audio Task - High priority, Core 1 (dedicated)
+    xTaskCreatePinnedToCore(
+        audioTask,        // Function
+        "AudioTask",      // Name
+        4096,             // Stack size
+        NULL,             // Parameters
+        3,                // High priority (0-5, 5=max)
+        &audioTaskHandle, // Handle
+        1                 // Core 1 (Core 0 = WiFi/Bluetooth)
+    );
 
-  // Multiplexer Task - Normal priority, Core 0
-  xTaskCreatePinnedToCore(
-      muxTask,
-      "MuxTask",
-      4096,
-      NULL,
-      1, // normal priority
-      &muxTaskHandle,
-      0 // Core 0
-  );
+    // Multiplexer Task - Normal priority, Core 0
+    xTaskCreatePinnedToCore(
+        muxTask,
+        "MuxTask",
+        4096,
+        NULL,
+        1, // normal priority
+        &muxTaskHandle,
+        0 // Core 0
+    );
 
-  if (audioTaskHandle && muxTaskHandle)
-  {
-    Serial.println("✓ Tasks created successfully");
-    Serial.println("  - AudioTask: Core 1, Priority 3");
-    Serial.println("  - MuxTask: Core 0, Priority 1");
-  }
-  else
-  {
-    Serial.println("✗ Task creation error");
-  }
+    if (audioTaskHandle && muxTaskHandle)
+    {
+        Serial.println("✓ Tasks created successfully");
+        Serial.println("  - AudioTask: Core 1, Priority 3");
+        Serial.println("  - MuxTask: Core 0, Priority 1");
+    }
+    else
+    {
+        Serial.println("✗ Task creation error");
+    }
 }
 
 void setup()
 {
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
 
-  // wait for serial to stabilize
-  delay(1000);
-  Serial.println("\n=== ESP32 Audio Synthesizer with Auto Pattern Switching ===\n");
+    // wait for serial to stabilize
+    delay(1000);
+    Serial.println("\n=== ESP32 Audio Synthesizer with Auto Pattern Switching ===\n");
 
-  // Setup ADC
-  analogSetWidth(12);
-  analogSetAttenuation(ADC_ATTENDB_MAX);
+    // Setup ADC
+    analogSetWidth(12);
+    analogSetAttenuation(ADC_ATTENDB_MAX);
 
-  // Setup audio and synthesizer
-  setupAudio();
+    // Setup audio and synthesizer
+    setupAudio();
 
-  // Setup synthesizer pattern
-  setupSynthesizer();
+    // Setup synthesizer pattern
+    setupSynthesizer();
 
-  // create tasks
-  setupTasks();
+    // create tasks
+    setupTasks();
 
-  Serial.println("Setup completed. Auto pattern switching every 20s.\n");
+    Serial.println("Setup completed. Auto pattern switching every 20s.\n");
 }
 
 // Memory formatting utility function
 String formatMemory(uint32_t bytes)
 {
-  if (bytes >= 1024 * 1024)
-  {
-    return String(bytes / 1024.0 / 1024.0, 1) + " MB";
-  }
-  else if (bytes >= 1024)
-  {
-    return String(bytes / 1024.0, 1) + " KB";
-  }
-  else
-  {
-    return String(bytes) + " B";
-  }
+    if (bytes >= 1024 * 1024)
+    {
+        return String(bytes / 1024.0 / 1024.0, 1) + " MB";
+    }
+    else if (bytes >= 1024)
+    {
+        return String(bytes / 1024.0, 1) + " KB";
+    }
+    else
+    {
+        return String(bytes) + " B";
+    }
 }
 
 // Main loop with pattern switching
 void loop()
 {
-  static unsigned long lastMonitor = 0;
+    static unsigned long lastMonitor = 0;
 
-  // CHECK PATTERN SWITCHING (every 20 seconds)
-  if (millis() - lastPatternChange > PATTERN_CHANGE_INTERVAL)
-  {
-    switchToNextPattern();
-    lastPatternChange = millis();
-  }
-  if (millis() - lastPatternChange > 200)
-  {
-    uint16_t rawValue = muxController.get(0, 0);
-    uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
-    bpm = constrain(bpm, 16, 200); // Sécurise les bornes
-    synthesizer.setBPM(bpm);
-  }
-
-  // SYSTEM MONITORING (every 5 seconds)
-  if (millis() - lastMonitor > 5000)
-  {
-    lastMonitor = millis();
-
-    // Memory calculations
-    uint32_t freeHeap = ESP.getFreeHeap();
-    uint32_t totalHeap = ESP.getHeapSize();
-    uint32_t usedHeap = totalHeap - freeHeap;
-    float usedPercent = (usedHeap * 100.0) / totalHeap;
-
-    Serial.printf("=== ⚙️  FREE RTOS STATUS  ⚙️  ===\n");
-    Serial.printf("💾 Memory: %s / %s (%.1f%% used)\n",
-                  formatMemory(usedHeap).c_str(),
-                  formatMemory(totalHeap).c_str(),
-                  usedPercent);
-
-    // Task states
-    if (audioTaskHandle)
+    // CHECK PATTERN SWITCHING (every 20 seconds)
+    if (millis() - lastPatternChange > PATTERN_CHANGE_INTERVAL)
     {
-      Serial.printf("🎵 AudioTask: %s\n",
-                    eTaskGetState(audioTaskHandle) == eRunning ? "Running" : "Stopped");
+        switchToNextPattern();
+        lastPatternChange = millis();
     }
-    if (muxTaskHandle)
+    if (millis() - lastPatternChange > 200)
     {
-      Serial.printf("🎛️  MuxTask: %s\n",
-                    eTaskGetState(muxTaskHandle) == eRunning ? "Running" : "Stopped");
+        uint16_t rawValue = muxController.get(0, 0);
+        uint16_t bpm = map(rawValue, 0, 1500, 16, 200);
+        bpm = constrain(bpm, 16, 200); // Sécurise les bornes
+        synthesizer.setBPM(bpm);
     }
 
-    // Synthesizer status with current pattern
-    Serial.printf("🎼 Pattern: %s | Step %d/%d | BPM %d | %s\n",
-                  patternNames[currentPattern],
-                  synthesizer.getCurrentStep() + 1,
-                  synthesizer.getNumSteps(),
-                  synthesizer.getBPM(),
-                  synthesizer.isPlaying() ? "Playing" : "Stopped");
+    // SYSTEM MONITORING (every 5 seconds)
+    if (millis() - lastMonitor > 5000)
+    {
+        lastMonitor = millis();
 
-    // Time until next pattern change
-    unsigned long timeUntilChange = PATTERN_CHANGE_INTERVAL - (millis() - lastPatternChange);
-    Serial.printf("⏰ Next pattern in: %lu seconds\n", timeUntilChange / 1000);
+        // Memory calculations
+        uint32_t freeHeap = ESP.getFreeHeap();
+        uint32_t totalHeap = ESP.getHeapSize();
+        uint32_t usedHeap = totalHeap - freeHeap;
+        float usedPercent = (usedHeap * 100.0) / totalHeap;
 
-    Serial.println();
-  }
+        Serial.printf("=== ⚙️  FREE RTOS STATUS  ⚙️  ===\n");
+        Serial.printf("💾 Memory: %s / %s (%.1f%% used)\n",
+                      formatMemory(usedHeap).c_str(),
+                      formatMemory(totalHeap).c_str(),
+                      usedPercent);
 
-  /*
-  for (uint8_t i = 0; i < 16; ++i)
-  {
-    float raw = muxController.get(0, 0);
-    plotValues(0, (uint16_t)raw);
-    delay(5);
-  }
-*/
+        // Task states
+        if (audioTaskHandle)
+        {
+            Serial.printf("🎵 AudioTask: %s\n",
+                          eTaskGetState(audioTaskHandle) == eRunning ? "Running" : "Stopped");
+        }
+        if (muxTaskHandle)
+        {
+            Serial.printf("🎛️  MuxTask: %s\n",
+                          eTaskGetState(muxTaskHandle) == eRunning ? "Running" : "Stopped");
+        }
+
+        // Synthesizer status with current pattern
+        Serial.printf("🎼 Pattern: %s | Step %d/%d | BPM %d | %s\n",
+                      patternNames[currentPattern],
+                      synthesizer.getCurrentStep() + 1,
+                      synthesizer.getNumSteps(),
+                      synthesizer.getBPM(),
+                      synthesizer.isPlaying() ? "Playing" : "Stopped");
+
+        // Time until next pattern change
+        unsigned long timeUntilChange = PATTERN_CHANGE_INTERVAL - (millis() - lastPatternChange);
+        Serial.printf("⏰ Next pattern in: %lu seconds\n", timeUntilChange / 1000);
+
+        Serial.println();
+    }
+
+    /*
+    for (uint8_t i = 0; i < 16; ++i)
+    {
+      float raw = muxController.get(0, 0);
+      plotValues(0, (uint16_t)raw);
+      delay(5);
+    }
+  */
 }
